@@ -283,6 +283,7 @@
             <h2 class="text-xl font-bold font-['Crimson_Pro'] mb-4">Room Management</h2>
             <div class="flex flex-col space-y-4">
                 <button id="adminDeleteAllRoomsBtn" class="btn-danger">Delete All Rooms</button>
+                <button id="switchToUserModeBtn" class="btn-primary">Switch to User Mode</button>
                 <div id="adminActiveRoomsList" class="space-y-2">
                     <p class="text-gray-500 text-sm">Loading rooms...</p>
                 </div>
@@ -303,6 +304,19 @@
             </div>
         </div>
     </main>
+
+    <!-- Username Modal for Switching to User Mode -->
+    <div id="usernameModal" class="modal-overlay hidden">
+        <div class="modal-content flex flex-col space-y-4">
+            <h2 class="text-xl font-bold font-['Crimson_Pro']">Enter Username</h2>
+            <p class="text-sm text-gray-400">Please enter a username to switch to user mode.</p>
+            <input type="text" id="switchUsernameInput" placeholder="Username" class="input-field" />
+            <div class="flex space-x-4">
+                <button id="confirmSwitchBtn" class="btn-primary flex-1">Confirm</button>
+                <button id="cancelSwitchBtn" class="btn-toggle flex-1">Cancel</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Password Modal (for admin actions and delete all rooms) -->
     <div id="passwordModal" class="modal-overlay hidden">
@@ -394,11 +408,16 @@
         const confirmBtn = document.getElementById('confirmBtn');
         const cancelBtn = document.getElementById('cancelBtn');
         const adminDeleteAllRoomsBtn = document.getElementById('adminDeleteAllRoomsBtn');
+        const switchToUserModeBtn = document.getElementById('switchToUserModeBtn');
         const adminActiveRoomsList = document.getElementById('adminActiveRoomsList');
         const adminActiveUsersList = document.getElementById('adminActiveUsersList');
         const totalRooms = document.getElementById('totalRooms');
         const totalUsers = document.getElementById('totalUsers');
         const serverStatus = document.getElementById('serverStatus');
+        const usernameModal = document.getElementById('usernameModal');
+        const switchUsernameInput = document.getElementById('switchUsernameInput');
+        const confirmSwitchBtn = document.getElementById('confirmSwitchBtn');
+        const cancelSwitchBtn = document.getElementById('cancelSwitchBtn');
 
         // Video quality options
         const videoQualities = {
@@ -497,6 +516,39 @@
                 const activeUsersRef = doc(db, `artifacts/${appId}/public/data/active-users`, userId);
                 await setDoc(activeUsersRef, { username: username, timestamp: serverTimestamp() });
             }
+        };
+
+        // Switch to user mode
+        const switchToUserMode = async () => {
+            usernameModal.classList.remove('hidden');
+        };
+
+        // Handle switch to user mode
+        const handleSwitchToUserMode = async () => {
+            const input = switchUsernameInput.value.trim();
+            if (!input) {
+                showMessage("Please enter a username.", true);
+                return;
+            }
+            username = input;
+            isAdmin = false;
+            adminDashboard.style.display = 'none';
+            mainApp.style.display = 'grid';
+            authStatus.textContent = `User ID: ${userId}`;
+            if (adminRoomsListener) adminRoomsListener();
+            if (adminUsersListener) adminUsersListener();
+            adminRoomsListener = null;
+            adminUsersListener = null;
+            createRoomBtn.disabled = false;
+            joinRoomBtn.disabled = false;
+            deleteAllRoomsBtn.disabled = false;
+            listenForRooms();
+            listenForActiveUsers();
+            const activeUsersRef = doc(db, `artifacts/${appId}/public/data/active-users`, userId);
+            await setDoc(activeUsersRef, { username: username, timestamp: serverTimestamp() });
+            usernameModal.classList.add('hidden');
+            switchUsernameInput.value = '';
+            showMessage(`Switched to user mode as ${username}.`, false);
         };
 
         // Get local stream
@@ -1271,6 +1323,12 @@
             passwordModalText.textContent = 'Enter the admin password to delete all rooms.';
             confirmBtn.dataset.action = 'delete-all';
             passwordModal.classList.remove('hidden');
+        });
+        switchToUserModeBtn.addEventListener('click', switchToUserMode);
+        confirmSwitchBtn.addEventListener('click', handleSwitchToUserMode);
+        cancelSwitchBtn.addEventListener('click', () => {
+            usernameModal.classList.add('hidden');
+            switchUsernameInput.value = '';
         });
         cancelBtn.addEventListener('click', () => {
             passwordModal.classList.add('hidden');
