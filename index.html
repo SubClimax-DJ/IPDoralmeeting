@@ -316,9 +316,9 @@
                 <h2 class="text-xl font-bold font-['Crimson_Pro'] mb-4">Room Management</h2>
                 <div class="flex flex-col space-y-4">
                     <div class="flex space-x-2">
-                        <input type="text" id="roomIdInput" placeholder="Enter Room ID" class="input-field flex-1" />
-                        <button id="joinRoomBtn" class="btn-primary px-6 py-3 font-semibold rounded-sm" disabled>Join</button>
+                        <input type="text" id="roomIdInput" placeholder="Enter Room ID to Join" class="input-field flex-1" />
                     </div>
+                    <button id="joinRoomBtn" class="btn-primary px-6 py-3 font-semibold rounded-sm" disabled>Join Room by ID</button>
                     <div class="flex items-center space-x-2">
                         <input type="checkbox" id="joinMutedCheckbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
                         <label for="joinMutedCheckbox" class="text-sm">Join with camera/mic off</label>
@@ -331,6 +331,8 @@
                             <option value="1080p">Full HD (1080p)</option>
                         </select>
                     </div>
+                    <h3 class="text-lg font-bold font-['Crimson_Pro'] mt-4 mb-2">Create New Room</h3>
+                    <input type="text" id="newRoomNameInput" placeholder="Enter a name for the new room" class="input-field max-w-full" />
                     <button id="createRoomBtn" class="btn-primary px-6 py-3 font-semibold rounded-sm" disabled>Create New Room</button>
                     <button id="deleteAllRoomsBtn" class="btn-danger px-6 py-3 font-semibold rounded-sm" disabled>Delete All Rooms</button>
                     <button id="lockRoomBtn" class="btn-toggle px-4 py-2 font-semibold rounded-sm focus:outline-none" disabled>Lock Room</button>
@@ -497,6 +499,7 @@
         const remoteAudioIcon = document.getElementById('remoteAudioIcon');
         const remoteVideoIcon = document.getElementById('remoteVideoIcon');
         const roomIdInput = document.getElementById('roomIdInput');
+        const newRoomNameInput = document.getElementById('newRoomNameInput');
         const createRoomBtn = document.getElementById('createRoomBtn');
         const joinRoomBtn = document.getElementById('joinRoomBtn');
         const deleteAllRoomsBtn = document.getElementById('deleteAllRoomsBtn');
@@ -773,14 +776,26 @@
         };
 
         const createRoom = async () => {
-            if (!userId) {
-                showMessage("Authentication in progress. Please wait.", true);
+            if (!username) {
+                showMessage("Please enter a username first.", true);
                 return;
             }
-            const roomName = `room-${Math.random().toString(36).substring(2, 9)}`;
-            roomIdInput.value = roomName;
+            const roomName = newRoomNameInput.value.trim();
+            if (!roomName) {
+                showMessage("Please enter a name for the new room.", true);
+                return;
+            }
+            
             roomRef = doc(db, `artifacts/${appId}/public/data/video-rooms`, roomName);
             showMessage("Creating room...");
+
+            // Check if room name already exists
+            const roomSnapshot = await getDoc(roomRef);
+            if (roomSnapshot.exists()) {
+                showMessage("A room with that name already exists. Please choose a different name.", true);
+                return;
+            }
+
             try {
                 const startMuted = joinMutedCheckbox.checked;
                 const stream = await getLocalStream(startMuted);
@@ -810,7 +825,7 @@
                 listenForRoomUpdates();
                 listenForRoomChat(roomRef);
                 listenForParticipants();
-                showMessage(`Room created! Share this ID: ${roomName}`);
+                showMessage(`Room "${roomName}" created! Share this ID with others.`);
                 updateRoomControls(true);
                 localVideoContainer.classList.add('active-border', 'pulse-border');
                 localVideoContainer.classList.remove('hidden');
@@ -866,7 +881,7 @@
                 listenForRoomChat(roomRef);
                 listenForParticipants();
                 remoteVideoLabel.textContent = roomData.createdByUsername;
-                showMessage(`Successfully joined room ${roomId}!`);
+                showMessage(`Successfully joined room "${roomId}"!`);
                 updateRoomControls(true);
                 localVideoContainer.classList.add('active-border');
                 localVideoContainer.classList.remove('hidden');
@@ -938,6 +953,7 @@
 
         const resetUI = () => {
             roomIdInput.value = '';
+            newRoomNameInput.value = '';
             statusMessage.style.display = 'none';
             updateRoomControls(false);
             roomChatCard.classList.add('hidden');
@@ -963,6 +979,8 @@
             roomChatInput.disabled = !inRoom;
             sendRoomChatBtn.disabled = !inRoom;
             roomFileUploadBtn.disabled = !inRoom;
+            newRoomNameInput.disabled = inRoom;
+            roomIdInput.disabled = inRoom;
             roomChatCard.classList.toggle('hidden', !inRoom);
             publicChatCard.classList.toggle('hidden', inRoom);
         };
@@ -1440,10 +1458,13 @@
                 if (users.length > 0) {
                     users.forEach(user => {
                         const userDiv = document.createElement('div');
-                        userDiv.className = 'flex items-center space-x-2 p-2 bg-[#3c3836] rounded-sm';
+                        userDiv.className = 'flex items-center justify-between p-2 bg-[#3c3836] rounded-sm';
                         userDiv.innerHTML = `
-                            <i class="fas fa-user-circle text-lg"></i>
-                            <span class="text-sm flex-1">${user.username}</span>
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-user-circle text-lg"></i>
+                                <span class="text-sm flex-1">${user.username}</span>
+                            </div>
+                            <button data-user-id="${user.id}" data-user-name="${user.username}" class="kick-user-btn btn-danger text-xs px-2 py-1">Kick</button>
                         `;
                         adminActiveUsersList.appendChild(userDiv);
                     });
@@ -1451,6 +1472,17 @@
                     adminActiveUsersList.innerHTML = '<p class="text-gray-500 text-sm">No active users.</p>';
                 }
             });
+        };
+        
+        const kickUserFromWaitingRoom = async (userIdToKick, usernameToKick) => {
+            try {
+                const userDocRef = doc(db, `artifacts/${appId}/public/data/active-users`, userIdToKick);
+                await deleteDoc(userDocRef);
+                showMessage(`User "${usernameToKick}" has been kicked from the waiting room.`, false);
+            } catch (error) {
+                console.error('Error kicking user:', error);
+                showMessage('Failed to kick user.', true);
+            }
         };
 
         const showRoomDetails = async (roomId) => {
@@ -1711,6 +1743,11 @@
                     passwordModalText.textContent = `Enter the admin password to delete room ${e.target.dataset.roomId}.`;
                     confirmBtn.dataset.action = `delete-room:${e.target.dataset.roomId}`;
                     passwordModal.classList.remove('hidden');
+                }
+                if (e.target.classList.contains('kick-user-btn')) {
+                    const userIdToKick = e.target.dataset.userId;
+                    const userNameToKick = e.target.dataset.userName;
+                    kickUserFromWaitingRoom(userIdToKick, userNameToKick);
                 }
                 if (e.target.dataset.action === 'kick') {
                     const participantId = e.target.dataset.participantId;
