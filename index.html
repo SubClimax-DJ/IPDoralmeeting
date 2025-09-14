@@ -394,6 +394,7 @@
 
         <div class="container-card">
             <h2 class="text-xl font-bold font-['Crimson_Pro'] mb-4">Active Users</h2>
+            <button id="clearPublicChatBtn" class="btn-danger w-full mb-4 px-6 py-3 font-semibold rounded-sm">Clear Waiting Room Chat</button>
             <div id="adminActiveUsersList" class="space-y-2 text-gray-400 text-sm">
                 <p>Loading users...</p>
             </div>
@@ -553,6 +554,7 @@
         const roomFileUploadBtn = document.getElementById('roomFileUploadBtn');
         const sakuraEffect = document.getElementById('sakuraEffect');
         const oneMB = 1048576; // 1MB in bytes
+        const clearPublicChatBtn = document.getElementById('clearPublicChatBtn');
 
         // === 3. UTILITY FUNCTIONS ===
 
@@ -1416,6 +1418,22 @@
 
         // === 8. ADMIN DASHBOARD FUNCTIONS ===
 
+        const clearPublicChat = async () => {
+            if (!confirm('Are you sure you want to delete all messages in the waiting room chat? This action cannot be undone.')) {
+                return;
+            }
+            try {
+                const chatMessagesRef = collection(db, `artifacts/${appId}/public/data/public-chat`);
+                const snapshot = await getDocs(chatMessagesRef);
+                const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
+                await Promise.all(deletePromises);
+                showMessage('Waiting room chat cleared successfully.', false);
+            } catch (error) {
+                console.error('Error clearing public chat:', error);
+                showMessage('Failed to clear waiting room chat.', true);
+            }
+        };
+
         const checkServerStatus = async () => {
             try {
                 const testDoc = doc(db, `artifacts/${appId}/public/data/test`);
@@ -1535,9 +1553,13 @@
                 <h3 class="text-lg font-semibold mb-2">Details for Room: ${roomId}</h3>
                 <p class="text-sm">Created by: ${roomData.createdByUsername}</p>
                 <p class="text-sm">Status: ${roomData.isLocked ? 'Locked' : 'Open'}</p>
-                <button data-room-id="${roomId}" data-action="toggle-lock" class="btn-toggle mt-2 px-4 py-2 font-semibold rounded-sm">
-                    ${roomData.isLocked ? 'Unlock Room' : 'Lock Room'}
-                </button>
+                <div class="flex space-x-2 mt-4">
+                    <button data-room-id="${roomId}" data-action="toggle-lock" class="btn-toggle px-4 py-2 font-semibold rounded-sm">
+                        ${roomData.isLocked ? 'Unlock Room' : 'Lock Room'}
+                    </button>
+                    <button data-room-id="${roomId}" data-action="mute-all" class="btn-danger px-4 py-2 font-semibold rounded-sm">Mute All</button>
+                    <button data-room-id="${roomId}" data-action="video-off-all" class="btn-danger px-4 py-2 font-semibold rounded-sm">Video Off All</button>
+                </div>
                 <h4 class="text-md font-semibold mt-4 mb-2">Participants:</h4>
                 <div class="space-y-2">
                     ${participantsListHtml || '<p class="text-gray-500 text-sm">No participants.</p>'}
@@ -1583,6 +1605,50 @@
             } catch (error) {
                 console.error('Error toggling audio:', error);
                 showMessage('Failed to toggle audio.', true);
+            }
+        };
+        
+        const massMuteParticipants = async (roomId, muteStatus) => {
+            try {
+                const roomRef = doc(db, `artifacts/${appId}/public/data/video-rooms`, roomId);
+                await runTransaction(db, async (transaction) => {
+                    const roomDoc = await transaction.get(roomRef);
+                    if (!roomDoc.exists()) {
+                        throw new Error("Room does not exist!");
+                    }
+                    const participants = roomDoc.data()?.participants || {};
+                    const updates = {};
+                    for (const pId in participants) {
+                        updates[`participants.${pId}.isMuted`] = muteStatus;
+                    }
+                    transaction.update(roomRef, updates);
+                });
+                showMessage(muteStatus ? `All participants in room ${roomId} have been muted.` : `All participants in room ${roomId} have been unmuted.`);
+            } catch(error) {
+                console.error('Error with mass mute:', error);
+                showMessage('Failed to mass mute participants.', true);
+            }
+        };
+        
+        const massVideoOffParticipants = async (roomId, videoOffStatus) => {
+            try {
+                const roomRef = doc(db, `artifacts/${appId}/public/data/video-rooms`, roomId);
+                await runTransaction(db, async (transaction) => {
+                    const roomDoc = await transaction.get(roomRef);
+                    if (!roomDoc.exists()) {
+                        throw new Error("Room does not exist!");
+                    }
+                    const participants = roomDoc.data()?.participants || {};
+                    const updates = {};
+                    for (const pId in participants) {
+                        updates[`participants.${pId}.isVideoOff`] = videoOffStatus;
+                    }
+                    transaction.update(roomRef, updates);
+                });
+                showMessage(videoOffStatus ? `All participants' video in room ${roomId} have been turned off.` : `All participants' video in room ${roomId} have been turned on.`);
+            } catch(error) {
+                console.error('Error with mass video off:', error);
+                showMessage('Failed to turn off all videos.', true);
             }
         };
 
@@ -1787,6 +1853,17 @@
                 if (e.target.dataset.action === 'toggle-lock') {
                     const roomId = e.target.dataset.roomId;
                     toggleAdminRoomLock(roomId);
+                }
+                if (e.target.dataset.action === 'mute-all') {
+                    const roomId = e.target.dataset.roomId;
+                    massMuteParticipants(roomId, true);
+                }
+                if (e.target.dataset.action === 'video-off-all') {
+                    const roomId = e.target.dataset.roomId;
+                    massVideoOffParticipants(roomId, true);
+                }
+                if (e.target.id === 'clearPublicChatBtn') {
+                    clearPublicChat();
                 }
             });
 
