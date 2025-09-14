@@ -304,7 +304,7 @@
         </div>
     </main>
 
-    <!-- Password Modal (for admin actions) -->
+    <!-- Password Modal (for admin actions and delete all rooms) -->
     <div id="passwordModal" class="modal-overlay hidden">
         <div class="modal-content flex flex-col space-y-4">
             <h2 class="text-xl font-bold font-['Crimson_Pro']" id="passwordModalTitle">Confirm Action</h2>
@@ -609,54 +609,59 @@
             roomIdInput.value = roomName;
             roomRef = doc(db, `artifacts/${appId}/public/data/video-rooms`, roomName);
             showMessage("Creating room...");
-            const startMuted = joinMutedCheckbox.checked;
-            const stream = await getLocalStream(startMuted);
-            if (!stream) return;
-            setupPeerConnection();
-            stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
-            const offer = await peerConnection.createOffer();
-            await peerConnection.setLocalDescription(offer);
-            const participants = { 
-                [userId]: {
-                    username: username,
-                    isMuted: joinMutedCheckbox.checked,
-                    isVideoOff: joinMutedCheckbox.checked
-                }
-            };
-            await setDoc(roomRef, {
-                offer: { sdp: offer.sdp, type: offer.type },
-                createdBy: userId,
-                createdByUsername: username,
-                participants: participants,
-                isLocked: false
-            });
-            roomSnapshotListener = onSnapshot(roomRef, async (snapshot) => {
-                const data = snapshot.data();
-                if (!snapshot.exists()) {
-                    hangup();
-                    showMessage("Room closed by host.", false);
-                    return;
-                }
-                if (data && data.answer && !peerConnection.currentRemoteDescription) {
-                    const answer = new RTCSessionDescription(data.answer);
-                    await peerConnection.setRemoteDescription(answer);
-                }
-            });
-            candidatesListener = onSnapshot(collection(roomRef, 'candidates'), (snapshot) => {
-                snapshot.docChanges().forEach(async (change) => {
-                    if (change.type === "added") {
-                        const candidate = new RTCIceCandidate(JSON.parse(change.doc.data().candidate));
-                        await peerConnection.addIceCandidate(candidate);
+            try {
+                const startMuted = joinMutedCheckbox.checked;
+                const stream = await getLocalStream(startMuted);
+                if (!stream) return;
+                setupPeerConnection();
+                stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+                const participants = { 
+                    [userId]: {
+                        username: username,
+                        isMuted: joinMutedCheckbox.checked,
+                        isVideoOff: joinMutedCheckbox.checked
+                    }
+                };
+                await setDoc(roomRef, {
+                    offer: { sdp: offer.sdp, type: offer.type },
+                    createdBy: userId,
+                    createdByUsername: username,
+                    participants: participants,
+                    isLocked: false
+                });
+                roomSnapshotListener = onSnapshot(roomRef, async (snapshot) => {
+                    const data = snapshot.data();
+                    if (!snapshot.exists()) {
+                        hangup();
+                        showMessage("Room closed by host.", false);
+                        return;
+                    }
+                    if (data && data.answer && !peerConnection.currentRemoteDescription) {
+                        const answer = new RTCSessionDescription(data.answer);
+                        await peerConnection.setRemoteDescription(answer);
                     }
                 });
-            });
-            listenForChat(roomRef);
-            listenForParticipants();
-            showMessage(`Room created! Share this ID with your client: ${roomName}`);
-            createRoomBtn.disabled = true;
-            joinRoomBtn.disabled = true;
-            hangupBtn.disabled = false;
-            sendChatBtn.disabled = false;
+                candidatesListener = onSnapshot(collection(roomRef, 'candidates'), (snapshot) => {
+                    snapshot.docChanges().forEach(async (change) => {
+                        if (change.type === "added") {
+                            const candidate = new RTCIceCandidate(JSON.parse(change.doc.data().candidate));
+                            await peerConnection.addIceCandidate(candidate);
+                        }
+                    });
+                });
+                listenForChat(roomRef);
+                listenForParticipants();
+                showMessage(`Room created! Share this ID with others: ${roomName}`);
+                createRoomBtn.disabled = true;
+                joinRoomBtn.disabled = true;
+                hangupBtn.disabled = false;
+                sendChatBtn.disabled = false;
+            } catch (error) {
+                console.error("Error creating room:", error);
+                showMessage("Failed to create room. Please try again.", true);
+            }
         };
 
         // Join room
@@ -682,36 +687,41 @@
                 return;
             }
             showMessage(`Joining room: ${roomId}`);
-            const startMuted = joinMutedCheckbox.checked;
-            const stream = await getLocalStream(startMuted);
-            if (!stream) return;
-            setupPeerConnection();
-            stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
-            const offer = roomSnapshot.data().offer;
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-            const answer = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(answer);
-            await updateDoc(roomRef, { answer: { sdp: answer.sdp, type: answer.type } });
-            await updateDoc(roomRef, { [`participants.${userId}`]: {
-                username: username,
-                isMuted: joinMutedCheckbox.checked,
-                isVideoOff: joinMutedCheckbox.checked
-            }});
-            candidatesListener = onSnapshot(collection(roomRef, 'candidates'), (snapshot) => {
-                snapshot.docChanges().forEach(async (change) => {
-                    if (change.type === "added") {
-                        const candidate = new RTCIceCandidate(JSON.parse(change.doc.data().candidate));
-                        await peerConnection.addIceCandidate(candidate);
-                    }
+            try {
+                const startMuted = joinMutedCheckbox.checked;
+                const stream = await getLocalStream(startMuted);
+                if (!stream) return;
+                setupPeerConnection();
+                stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+                const offer = roomSnapshot.data().offer;
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+                await updateDoc(roomRef, { answer: { sdp: answer.sdp, type: answer.type } });
+                await updateDoc(roomRef, { [`participants.${userId}`]: {
+                    username: username,
+                    isMuted: joinMutedCheckbox.checked,
+                    isVideoOff: joinMutedCheckbox.checked
+                }});
+                candidatesListener = onSnapshot(collection(roomRef, 'candidates'), (snapshot) => {
+                    snapshot.docChanges().forEach(async (change) => {
+                        if (change.type === "added") {
+                            const candidate = new RTCIceCandidate(JSON.parse(change.doc.data().candidate));
+                            await peerConnection.addIceCandidate(candidate);
+                        }
+                    });
                 });
-            });
-            listenForChat(roomRef);
-            listenForParticipants();
-            showMessage(`Successfully joined room ${roomId}!`);
-            createRoomBtn.disabled = true;
-            joinRoomBtn.disabled = true;
-            hangupBtn.disabled = false;
-            sendChatBtn.disabled = false;
+                listenForChat(roomRef);
+                listenForParticipants();
+                showMessage(`Successfully joined room ${roomId}!`);
+                createRoomBtn.disabled = true;
+                joinRoomBtn.disabled = true;
+                hangupBtn.disabled = false;
+                sendChatBtn.disabled = false;
+            } catch (error) {
+                console.error("Error joining room:", error);
+                showMessage("Failed to join room. Please try again.", true);
+            }
         };
 
         // Hang up
@@ -1159,8 +1169,6 @@
             const action = confirmBtn.dataset.action;
             if (action === 'delete-all') {
                 deleteAllRooms();
-            } else if (action === 'create-room') {
-                createRoom();
             } else if (action.startsWith('delete-room:')) {
                 const roomId = action.split(':')[1];
                 deleteRoom(roomId);
@@ -1206,12 +1214,7 @@
         usernameInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') handleLogin();
         });
-        createRoomBtn.addEventListener('click', () => {
-            passwordModalTitle.textContent = 'Create a New Room';
-            passwordModalText.textContent = 'Please enter the administrator password to create a room.';
-            confirmBtn.dataset.action = 'create-room';
-            passwordModal.classList.remove('hidden');
-        });
+        createRoomBtn.addEventListener('click', createRoom);
         joinRoomBtn.addEventListener('click', joinRoom);
         hangupBtn.addEventListener('click', hangup);
         toggleAudioBtn.addEventListener('click', toggleAudio);
