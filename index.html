@@ -207,7 +207,7 @@
             <input type="text" id="roomIdInput" placeholder="Enter Room Name or ID" class="w-full px-4 py-3 rounded-sm border border-gray-600 focus:outline-none focus:ring-2 transition duration-200 bg-[#32302f] text-[#ebdbb2] flex-1" />
             <button id="joinRoomBtn" class="px-6 py-3 font-semibold rounded-sm transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-[#458588] text-[#ebdbb2]" disabled>Join</button>
           </div>
-          <p class="text-sm text-gray-400">Enter a name to create a new room or an existing ID to join. New rooms may take a few seconds to appear in Active Rooms.</p>
+          <p class="text-sm text-gray-400">Enter a name to create a new room or an existing ID to join. Lists update every 5 seconds or click Refresh.</p>
           <div class="flex items-center space-x-2">
             <input type="checkbox" id="joinMutedCheckbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
             <label for="joinMutedCheckbox" class="text-sm">Join with camera/mic off</label>
@@ -220,7 +220,10 @@
               <option value="1080p">Full HD (1080p)</option>
             </select>
           </div>
-          <button id="createRoomBtn" class="px-6 py-3 font-semibold rounded-sm transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-[#458588] text-[#ebdbb2]" disabled>Create New Room</button>
+          <div class="flex space-x-2">
+            <button id="createRoomBtn" class="px-6 py-3 font-semibold rounded-sm transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-[#458588] text-[#ebdbb2]" disabled>Create New Room</button>
+            <button id="refreshListsBtn" class="px-6 py-3 font-semibold rounded-sm transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-[#b8bb26] text-[#1d2021]">Refresh Lists</button>
+          </div>
           <button id="deleteAllRoomsBtn" class="px-6 py-3 font-semibold rounded-sm transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-[#fb4934] text-[#ebdbb2]" disabled>Delete All Rooms</button>
           <button id="lockRoomBtn" class="px-4 py-2 font-semibold rounded-sm transition duration-300 bg-[#504945] text-[#ebdbb2]" disabled>Lock Room</button>
         </div>
@@ -390,6 +393,7 @@
     const passwordInput = document.getElementById('passwordInput');
     const confirmBtn = document.getElementById('confirmBtn');
     const cancelBtn = document.getElementById('cancelBtn');
+    const refreshListsBtn = document.getElementById('refreshListsBtn');
 
     // Utility Functions
     const showMessage = (msg, isError = false) => {
@@ -407,10 +411,23 @@
       const storedRooms = localStorage.getItem('rooms');
       if (storedRooms) {
         const parsedRooms = JSON.parse(storedRooms);
-        // Filter out rooms with no participants to clean up
         rooms = parsedRooms.filter(room => room.participants.length > 0);
         saveRoomsToStorage();
         updateRoomsList();
+      }
+    };
+
+    const saveUsersToStorage = () => {
+      localStorage.setItem('users', JSON.stringify(users));
+    };
+
+    const loadUsersFromStorage = () => {
+      const storedUsers = localStorage.getItem('users');
+      if (storedUsers) {
+        const parsedUsers = JSON.parse(storedUsers);
+        users = parsedUsers.filter(u => !pastUsers.find(pu => pu.username === u.username && pu.status === 'Banned'));
+        saveUsersToStorage();
+        updateUsersList();
       }
     };
 
@@ -473,7 +490,7 @@
         div.className = 'flex items-center space-x-2 p-2 bg-[#3c3836] rounded-sm';
         div.innerHTML = `
           <i class="fas fa-user-circle text-lg"></i>
-          <span class="text-sm flex-1">${u.username}</span>
+          <span class="text-sm flex-1">${u.username}${u.currentRoom ? ` (in ${u.currentRoom})` : ''}</span>
         `;
         activeUsersList.appendChild(div);
       });
@@ -584,14 +601,19 @@
       authStatus.textContent = `User: ${username}`;
       users.push({ username, ipAddress, joinedAt: new Date().toLocaleString(), currentRoom: null });
       pastUsers.push({ username, ipAddress, joinedAt: new Date().toLocaleString(), currentRoom: null, status: 'Active' });
+      saveUsersToStorage();
       loadRoomsFromStorage();
+      loadUsersFromStorage();
       updateUsersList();
       updateAdminDashboard();
       createRoomBtn.disabled = false;
       joinRoomBtn.disabled = false;
       deleteAllRoomsBtn.disabled = false;
-      // Start periodic room list refresh
-      setInterval(loadRoomsFromStorage, 5000);
+      // Start periodic room and user list refresh
+      setInterval(() => {
+        loadRoomsFromStorage();
+        loadUsersFromStorage();
+      }, 5000);
     };
 
     const createRoom = () => {
@@ -637,6 +659,7 @@
       users.find(u => u.username === username).currentRoom = roomId;
       pastUsers.find(u => u.username === username).currentRoom = roomId;
       saveRoomsToStorage();
+      saveUsersToStorage();
       updateRoomsList();
       updateParticipantsList();
       updateUsersList();
@@ -668,6 +691,7 @@
         messages = messages.filter(m => m.roomId !== roomIdInput.value);
         chatContainer.innerHTML = '';
         saveRoomsToStorage();
+        saveUsersToStorage();
         updateRoomsList();
         updateParticipantsList();
         updateUsersList();
@@ -834,6 +858,7 @@
       currentRoom = null;
       chatContainer.innerHTML = '';
       saveRoomsToStorage();
+      saveUsersToStorage();
       updateRoomsList();
       updateParticipantsList();
       updateUsersList();
@@ -884,6 +909,7 @@
           users.find(u => u.username === confirmBtn.dataset.username).currentRoom = null;
           pastUsers.find(u => u.username === confirmBtn.dataset.username).currentRoom = null;
           saveRoomsToStorage();
+          saveUsersToStorage();
           updateRoomsList();
           updateParticipantsList();
           updateUsersList();
@@ -897,6 +923,7 @@
         rooms.forEach(r => r.participants = r.participants.filter(p => p.username !== confirmBtn.dataset.username));
         rooms = rooms.filter(r => r.participants.length > 0);
         saveRoomsToStorage();
+        saveUsersToStorage();
         if (currentRoom) updateParticipantsList();
         updateRoomsList();
         updateUsersList();
@@ -996,6 +1023,11 @@
     cancelBtn.addEventListener('click', () => {
       passwordModal.classList.add('hidden');
       passwordInput.value = '';
+    });
+    refreshListsBtn.addEventListener('click', () => {
+      loadRoomsFromStorage();
+      loadUsersFromStorage();
+      showMessage('Room and user lists refreshed.');
     });
   </script>
 </body>
