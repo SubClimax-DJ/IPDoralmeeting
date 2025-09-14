@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Doral Video Conference</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome for icons -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/js/all.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600&family=Lato:wght@400;700&display=swap');
+    body {
+      font-family: 'Lato', sans-serif;
+      background-color: #282828;
+      color: #ebdbb2;
+      background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://i.postimg.cc/9fYYq5K9/image.png');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+    }
+    .header {
+      background-color: #1d2021;
+      color: #ebdbb2;
+    }
+    .container-card {
+      background-color: #32302f;
+      border-radius: 0.5rem;
+      padding: 2rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+    .video-container {
+      position: relative;
+      width: 100%;
+      padding-top: 56.25%; /* 16:9 Aspect Ratio */
+      background-color: #1d2021;
+      border-radius: 0.5rem;
+      overflow: hidden;
+    }
+    .video-element {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: all 0.3s ease-in-out;
+    }
+    #localVideo {
+      width: 150px;
+      height: 112.5px;
+      position: absolute;
+      bottom: 1rem;
+      right: 1rem;
+      border-radius: 0.25rem;
+      z-index: 10;
+      border: 2px solid #ebdbb2;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+    }
+    #remoteVideo {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 5;
+    }
+    .chat-container {
+      background-color: #3c3836;
+      border: 1px solid #504945;
+      border-radius: 0.5rem;
+      height: 500px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column-reverse;
+    }
+    .message {
+      padding: 0.5rem 1rem;
+      margin: 0.5rem;
+      border-radius: 0.75rem;
+      max-width: 85%;
+      word-wrap: break-word;
+    }
+    .my-message {
+      background-color: #458588;
+      color: #ebdbb2;
+      align-self: flex-end;
+    }
+    .other-message {
+      background-color: #665c54;
+      color: #ebdbb2;
+      align-self: flex-start;
+    }
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 50;
+    }
+    .modal-content {
+      background-color: #32302f;
+      padding: 2rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+      width: 90%;
+      max-width: 1000px;
+    }
+    .user-stats {
+      background-color: #504945;
+      padding: 1rem;
+      border-radius: 0.25rem;
+      margin-bottom: 1rem;
+    }
+    .loading-bar {
+      width: 100%;
+      max-width: 300px;
+      height: 6px;
+      background-color: #504945;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .loading-bar-progress {
+      width: 0;
+      height: 100%;
+      background-color: #458588;
+      animation: loading 4s linear infinite;
+    }
+    @keyframes loading {
+      0% { width: 0%; }
+      50% { width: 60%; }
+      100% { width: 100%; }
+    }
+  </style>
+</head>
+<body class="flex flex-col items-center min-h-screen p-4">
+  <!-- Header -->
+  <header class="header w-full py-4 mb-8 flex flex-col sm:flex-row items-center justify-between px-6 shadow-md">
+    <div class="flex items-center">
+      <img src="https://content.enrollmystudent.org/contact_school_logo/school_logo_1655490559.jpg" alt="School Logo" class="h-12 mr-4">
+      <div class="flex flex-col items-start">
+        <h1 class="text-3xl sm:text-4xl font-semibold font-['Crimson_Pro']">Doral Video Conference</h1>
+        <p class="text-sm font-light text-gray-400 mt-1">Created by Coach Prebeg</p>
+      </div>
+    </div>
+    <div class="flex items-center space-x-4 mt-2 sm:mt-0">
+      <div class="text-sm font-light" id="auth-status">Guest User</div>
+      <button id="adminLoginBtn" class="px-6 py-3 font-semibold rounded-sm transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-[#458588] text-[#ebdbb2]">Admin Login</button>
+    </div>
+  </header>
+
+  <!-- Main App Content (hidden initially) -->
+  <main id="mainApp" class="w-full max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-[1fr_2fr_1fr] md:gap-8 hidden">
+    <!-- Left Sidebar: Chat -->
+    <div class="space-y-8">
+      <div class="container-card">
+        <h2 class="text-xl font-bold font-['Crimson_Pro'] mb-4">Chat</h2>
+        <div class="chat-container mb-4" id="chatContainer"></div>
+        <div class="flex space-x-2 items-center">
+          <input type="file" id="fileInput" class="hidden" accept="image/*,.pdf,.txt" />
+          <button id="fileUploadBtn" class="px-4 py-2 font-semibold rounded-sm transition duration-300 bg-[#504945] text-[#ebdbb2]"><i class="fas fa-paperclip"></i></button>
+          <input type="text" id="chatInput" placeholder="Send a message..." class="w-full px-4 py-3 rounded-sm border border-gray-600 focus:outline-none focus:ring-2 transition duration-200 bg-[#32302f] text-[#ebdbb2] flex-1" />
+          <button id="sendChatBtn" class="px-6 py-3 font-semibold rounded-sm transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-[#458588] text-[#ebdbb2]" disabled>Send</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center: Video Feed -->
+    <div class="container-card">
+      <h2 class="text-xl font-bold font-['Crimson_Pro'] mb-4">Video Feed</h2>
+      <div class="video-container mb-4">
+        <video id="remoteVideo" class="video-element" autoplay playsinline poster="https://via.placeholder.com/1280x720?text=Remote+Video"></video>
+        <video id="localVideo" class="video-element" autoplay playsinline muted poster="https://via.placeholder.com/150x112?text=Local+Video"></video>
+      </div>
+      <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 items-center justify-center">
+        <button id="toggleAudioBtn" class="px-4 py-2 font-semibold rounded-sm transition duration-300 bg-[#504945] text-[#ebdbb2]" disabled><i class="fas fa-microphone"></i> Mute Audio</button>
+        <button id="toggleVideoBtn" class="px-4 py-2 font-semibold rounded-sm transition duration-300 bg-[#504945] text-[#ebdbb2]" disabled><i class="fas fa-video"></i> Mute Video</button>
+        <button id="screenShareBtn" class="px-4 py-2 font-semibold rounded-sm transition duration-300 bg-[#504945] text-[#ebdbb2]" disabled><i class="fas fa-desktop"></i> Screen Share</button>
+        <button id="fullScreenBtn" class="px-4 py-2 font-semibold rounded-sm transition duration-300 bg-[#504945] text-[#ebdbb2]" disabled><i class="fas fa-expand"></i> Fullscreen</button>
+        <button id="sideBySideBtn" class="px-4 py-2 font-semibold rounded-sm transition duration-300 bg-[#504945] text-[#ebdbb2]" disabled><i class="fas fa-columns"></i> Side-by-Side</button>
+        <button id="hangupBtn" class="px-6 py-3 font-semibold rounded-sm transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-[#fb4934] text-[#ebdbb2] flex-1" disabled>Leave Room</button>
+      </div>
+      <div class="flex mt-4 space-x-4 items-center justify-center">
+        <i class="fas fa-volume-down text-lg"></i>
+        <input type="range" id="volumeControl" min="0" max="100" value="100" class="flex-1 cursor-pointer">
+        <i class="fas fa-volume-up text-lg"></i>
+      </div>
+      <div class="flex mt-4 space-x-4 justify-center">
+        <button id="startRecordingBtn" class="px-6 py-3 font-semibold rounded-sm transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-[#458588] text-[#ebdbb2]" disabled>Start Recording</button>
+        <button id="stopRecordingBtn" class="px-6 py-3 font-semibold rounded-sm transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-[#fb4934] text-[#ebdbb2]" disabled>Stop Recording</button>
+      </div>
+      <a id="downloadRecording" class="hidden" href="#"></a>
+    </div>
+
+    <!-- Right Sidebar: Room Management -->
+    <div class="space-y-8">
+      <div class="container-card">
+        <h2 class="text-xl font-bold font-['Crimson_Pro'] mb-4">Room Management</h2>
+        <div class="flex flex-col space-y-4">
+          <div class="flex space-x-2">
+            <input type="text" id="roomIdInput" placeholder="Enter Room Name or ID" class="w-full px-4 py-3 rounded-sm border border-gray-600 focus:outline-none focus:ring-2 transition duration-200 bg-[#32302f] text-[#ebdbb2] flex-1" />
+            <button id="joinRoomBtn" class="px-6 py-3 font-semibold rounded-sm transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-[#458588] text-[#ebdbb2]" disabled>Join</button>
+          </div>
+          <p class="text-sm text-gray-400">Enter a name to create a new room or an existing ID to join.</p>
+          <div class="flex items-center space-x-2">
+            <input type="checkbox" id="joinMutedCheckbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+            <label for="joinMutedCheckbox" class="text-sm">Join with camera/mic off</label>
+          </div>
+          <div class="flex items-center space-x-2">
+            <label for="videoQualitySelect" class="text-sm">Video Quality:</label>
+            <select id="videoQualitySelect" class="w-full px-4 py-3 rounded-sm border border-gray-600 focus:outline-none focus:ring-2 transition duration-200 bg-[#32302f] text-[#ebdbb2] flex-1">
+              <option value="480p">SD (480p)</option>
+              <option value="720p">HD (720p)</option>
+              <option value="1080p">Full HD (1080p)</option>
+            </select>
+          </div>
+          <button id="createRoomBtn" class="px-6 py-3 font-semibold rounded-sm transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-[#458588] text-[#ebdbb2]" disabled>Create New Room</button>
+          <button id="deleteAllRoomsBtn" class="px-6 py-3 font-semibold rounded-sm transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-[#fb4934] text-[#ebdbb2]" disabled>Delete All Rooms</button>
+          <button id="lockRoomBtn" class="px-4 py-2 font-semibold rounded-sm transition duration-300 bg-[#504945] text-[#ebdbb2]" disabled>Lock Room</button>
+        </div>
+      </div>
+      <div class="container-card">
+        <h2 class="text-xl font-bold font-['Crimson_Pro'] mb-4">Active Rooms</h2>
+        <div id="activeRoomsList" class="space-y-2">
+          <p class="text-gray-500 text-sm">No active rooms.</p>
+        </div>
+      </div>
+      <div class="container-card">
+        <h2 class="text-xl font-bold font-['Crimson_Pro'] mb-4">Participants</h2>
+        <div id="participantsList" class="space-y-2 text-gray-400 text-sm">
+          No participants in this room.
+        </div>
+      </div>
+      <div class="container-card">
+        <h2 class="text-xl font-bold font-['Crimson_Pro'] mb-4">Active Users</h2>
+        <div id="activeUsersList" class="space-y-2 text-gray-400 text-sm">
+          No active users.
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Username Prompt -->
+  <div id="usernamePrompt" class="md:col-span-3 flex flex-col items-center justify-center p-8 bg-[#32302f] rounded-lg shadow-xl absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4/5 md:w-1/2">
+    <h2 class="text-2xl font-bold font-['Crimson_Pro'] mb-4">Enter Your Username</h2>
+    <p class="text-sm text-gray-400 mb-6 text-center">Your username will be visible to other participants in the chat.</p>
+    <input type="text" id="usernameInput" placeholder="Your Name" class="w-full px-4 py-3 rounded-sm border border-gray-600 focus:outline-none focus:ring-2 transition duration-200 bg-[#32302f] text-[#ebdbb2] max-w-sm mb-4" />
+    <button id="submitUsernameBtn" class="px-6 py-3 font-semibold rounded-sm transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-[#458588] text-[#ebdbb2] max-w-xs w-full">Start</button>
+    <div id="loadingBar" class="loading-bar mt-4 hidden">
+      <div class="loading-bar-progress"></div>
+    </div>
+  </div>
+
+  <!-- Admin Login Modal -->
+  <div id="adminLoginModal" class="modal-overlay hidden">
+    <div class="modal-content flex flex-col space-y-4">
+      <h2 class="text-xl font-bold font-['Crimson_Pro']">Admin Login</h2>
+      <p class="text-sm text-gray-400">Enter admin credentials to access user information.</p>
+      <input type="text" id="adminUsernameInput" placeholder="Admin Username" class="w-full px-4 py-3 rounded-sm border border-gray-600 focus:outline-none focus:ring-2 transition duration-200 bg-[#32302f] text-[#ebdbb2]" />
+      <input type="password" id="adminPasswordInput" placeholder="Password" class="w-full px-4 py-3 rounded-sm border border-gray-600 focus:outline-none focus:ring-2 transition duration-200 bg-[#32302f] text-[#ebdbb2]" />
+      <div class="flex space-x-4">
+        <button id="adminLoginConfirmBtn" class="px-6 py-3 font-semibold rounded-sm transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-[#458588] text-[#ebdbb2] flex-1">Login</button>
+        <button id="adminLoginCancelBtn" class="px-4 py-2 font-semibold rounded-sm transition duration-300 bg-[#504945] text-[#ebdbb2] flex-1">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Dashboard Modal -->
+  <div id="adminDashboardModal" class="modal-overlay hidden">
+    <div class="modal-content flex flex-col space-y-4 w-full max-w-6xl">
+      <h2 class="text-xl font-bold font-['Crimson_Pro']">Admin Dashboard - User Management</h2>
+      <div class="flex space-x-4 mb-4">
+        <button id="lockAllRoomsBtn" class="px-4 py-2 font-semibold rounded-sm transition duration-300 bg-[#504945] text-[#ebdbb2]">Lock All Rooms</button>
+        <button id="unlockAllRoomsBtn" class="px-4 py-2 font-semibold rounded-sm transition duration-300 bg-[#504945] text-[#ebdbb2]">Unlock All Rooms</button>
+        <button id="refreshUserDataBtn" class="px-6 py-3 font-semibold rounded-sm transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-[#458588] text-[#ebdbb2]">Refresh Data</button>
+      </div>
+      <h3 class="text-lg font-semibold">All Registered Users</h3>
+      <div id="userInfoList" class="space-y-4 max-h-[50vh] overflow-y-auto">
+        <p class="text-gray-500 text-sm">No users found.</p>
+      </div>
+      <h3 class="text-lg font-semibold mt-4">Schedule Meeting</h3>
+      <div class="flex flex-col space-y-2">
+        <input type="text" id="meetingTitleInput" placeholder="Meeting Title" class="w-full px-4 py-3 rounded-sm border border-gray-600 focus:outline-none focus:ring-2 transition duration-200 bg-[#32302f] text-[#ebdbb2]" />
+        <input type="datetime-local" id="meetingTimeInput" class="w-full px-4 py-3 rounded-sm border border-gray-600 focus:outline-none focus:ring-2 transition duration-200 bg-[#32302f] text-[#ebdbb2]" />
+        <button id="scheduleMeetingBtn" class="px-6 py-3 font-semibold rounded-sm transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-[#458588] text-[#ebdbb2]">Schedule Meeting</button>
+      </div>
+      <h3 class="text-lg font-semibold mt-4">Scheduled Meetings</h3>
+      <div id="scheduledMeetingsList" class="space-y-2 max-h-[20vh] overflow-y-auto">
+        <p class="text-gray-500 text-sm">No scheduled meetings.</p>
+      </div>
+      <button id="adminDashboardCloseBtn" class="px-4 py-2 font-semibold rounded-sm transition duration-300 bg-[#504945] text-[#ebdbb2]">Close</button>
+    </div>
+  </div>
+
+  <!-- Password Modal for Admin Actions -->
+  <div id="passwordModal" class="modal-overlay hidden">
+    <div class="modal-content flex flex-col space-y-4">
+      <h2 class="text-xl font-bold font-['Crimson_Pro']" id="passwordModalTitle">Enter Password</h2>
+      <p class="text-sm text-gray-400" id="passwordModalText">To perform this action, please enter the administrator password.</p>
+      <input type="password" id="passwordInput" placeholder="Password" class="w-full px-4 py-3 rounded-sm border border-gray-600 focus:outline-none focus:ring-2 transition duration-200 bg-[#32302f] text-[#ebdbb2]" />
+      <div class="flex space-x-4">
+        <button id="confirmBtn" class="px-6 py-3 font-semibold rounded-sm transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-[#fb4934] text-[#ebdbb2] flex-1" data-action="">Confirm</button>
+        <button id="cancelBtn" class="px-4 py-2 font-semibold rounded-sm transition duration-300 bg-[#504945] text-[#ebdbb2] flex-1">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Direct Message Modal -->
+  <div id="directMessageModal" class="modal-overlay hidden">
+    <div class="modal-content flex flex-col space-y-4">
+      <h2 class="text-xl font-bold font-['Crimson_Pro']" id="directMessageTitle">Direct Message</h2>
+      <div class="chat-container mb-4" id="directMessageContainer" style="height: 300px;"></div>
+      <div class="flex space-x-2 items-center">
+        <input type="file" id="directFileInput" class="hidden" accept="image/*,.pdf,.txt" />
+        <button id="directFileUploadBtn" class="px-4 py-2 font-semibold rounded-sm transition duration-300 bg-[#504945] text-[#ebdbb2]"><i class="fas fa-paperclip"></i></button>
+        <input type="text" id="directChatInput" placeholder="Send a direct message..." class="w-full px-4 py-3 rounded-sm border border-gray-600 focus:outline-none focus:ring-2 transition duration-200 bg-[#32302f] text-[#ebdbb2] flex-1" />
+        <button id="sendDirectChatBtn" class="px-6 py-3 font-semibold rounded-sm transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-[#458588] text-[#ebdbb2]">Send</button>
+      </div>
+      <button id="directMessageCloseBtn" class="px-4 py-2 font-semibold rounded-sm transition duration-300 bg-[#504945] text-[#ebdbb2]">Close</button>
+    </div>
+  </div>
+
+  <!-- Status Message -->
+  <div id="status-message" class="fixed bottom-4 left-1/2 -translate-x-1/2 p-4 rounded-lg text-sm text-center text-gray-700 bg-gray-100 hidden"></div>
+
+  <script>
+    // Note: For reliable IP fetching, run this app using a local server to avoid CORS issues.
+    // Install: npm install -g http-server
+    // Run: http-server
+    // Then visit: http://localhost:8080
+
+    // State Management
+    let username = '';
+    let isAdmin = false;
+    let currentRoom = null;
+    let rooms = [];
+    let users = [];
+    let messages = [];
+    let directMessages = [];
+    let meetings = [];
+    let isScreenSharing = false;
+    let isSideBySide = false;
+    let isRecording = false;
+    let recordedChunks = [];
+    let currentDirectRecipient = null;
+
+    // UI Elements
+    const usernamePrompt = document.getElementById('usernamePrompt');
+    const mainApp = document.getElementById('mainApp');
+    const usernameInput = document.getElementById('usernameInput');
+    const submitUsernameBtn = document.getElementById('submitUsernameBtn');
+    const loadingBar = document.getElementById('loadingBar');
+    const localVideo = document.getElementById('localVideo');
+    const remoteVideo = document.getElementById('remoteVideo');
+    const roomIdInput = document.getElementById('roomIdInput');
+    const createRoomBtn = document.getElementById('createRoomBtn');
+    const joinRoomBtn = document.getElementById('joinRoomBtn');
+    const deleteAllRoomsBtn = document.getElementById('deleteAllRoomsBtn');
+    const lockRoomBtn = document.getElementById('lockRoomBtn');
+    const hangupBtn = document.getElementById('hangupBtn');
+    const toggleAudioBtn = document.getElementById('toggleAudioBtn');
+    const toggleVideoBtn = document.getElementById('toggleVideoBtn');
+    const screenShareBtn = document.getElementById('screenShareBtn');
+    const fullScreenBtn = document.getElementById('fullScreenBtn');
+    const sideBySideBtn = document.getElementById('sideBySideBtn');
+    const videoQualitySelect = document.getElementById('videoQualitySelect');
+    const volumeControl = document.getElementById('volumeControl');
+    const startRecordingBtn = document.getElementById('startRecordingBtn');
+    const stopRecordingBtn = document.getElementById('stopRecordingBtn');
+    const chatInput = document.getElementById('chatInput');
+    const sendChatBtn = document.getElementById('sendChatBtn');
+    const chatContainer = document.getElementById('chatContainer');
+    const fileInput = document.getElementById('fileInput');
+    const fileUploadBtn = document.getElementById('fileUploadBtn');
+    const statusMessage = document.getElementById('status-message');
+    const authStatus = document.getElementById('auth-status');
+    const activeRoomsList = document.getElementById('activeRoomsList');
+    const joinMutedCheckbox = document.getElementById('joinMutedCheckbox');
+    const participantsList = document.getElementById('participantsList');
+    const activeUsersList = document.getElementById('activeUsersList');
+    const adminLoginBtn = document.getElementById('adminLoginBtn');
+    const adminLoginModal = document.getElementById('adminLoginModal');
+    const adminUsernameInput = document.getElementById('adminUsernameInput');
+    const adminPasswordInput = document.getElementById('adminPasswordInput');
+    const adminLoginConfirmBtn = document.getElementById('adminLoginConfirmBtn');
+    const adminLoginCancelBtn = document.getElementById('adminLoginCancelBtn');
+    const adminDashboardModal = document.getElementById('adminDashboardModal');
+    const userInfoList = document.getElementById('userInfoList');
+    const scheduledMeetingsList = document.getElementById('scheduledMeetingsList');
+    const adminDashboardCloseBtn = document.getElementById('adminDashboardCloseBtn');
+    const lockAllRoomsBtn = document.getElementById('lockAllRoomsBtn');
+    const unlockAllRoomsBtn = document.getElementById('unlockAllRoomsBtn');
+    const refreshUserDataBtn = document.getElementById('refreshUserDataBtn');
+    const scheduleMeetingBtn = document.getElementById('scheduleMeetingBtn');
+    const meetingTitleInput = document.getElementById('meetingTitleInput');
+    const meetingTimeInput = document.getElementById('meetingTimeInput');
+    const passwordModal = document.getElementById('passwordModal');
+    const passwordModalTitle = document.getElementById('passwordModalTitle');
+    const passwordModalText = document.getElementById('passwordModalText');
+    const passwordInput = document.getElementById('passwordInput');
+    const confirmBtn = document.getElementById('confirmBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const directMessageModal = document.getElementById('directMessageModal');
+    const directMessageTitle = document.getElementById('directMessageTitle');
+    const directMessageContainer = document.getElementById('directMessageContainer');
+    const directChatInput = document.getElementById('directChatInput');
+    const sendDirectChatBtn = document.getElementById('sendDirectChatBtn');
+    const directFileInput = document.getElementById('directFileInput');
+    const directFileUploadBtn = document.getElementById('directFileUploadBtn');
+    const directMessageCloseBtn = document.getElementById('directMessageCloseBtn');
+
+    // Utility Functions
+    const showMessage = (msg, isError = false) => {
+      statusMessage.textContent = msg;
+      statusMessage.className = `fixed bottom-4 left-1/2 -translate-x-1/2 p-4 rounded-lg text-sm text-center transition-all duration-300 transform animate-fade-in ${isError ? 'text-red-700 bg-red-100' : 'text-gray-700 bg-gray-100'}`;
+      statusMessage.style.display = 'block';
+      setTimeout(() => statusMessage.style.display = 'none', 3000);
+    };
+
+    const updateRoomsList = () => {
+      activeRoomsList.innerHTML = rooms.length ? '' : '<p class="text-gray-500 text-sm">No active rooms.</p>';
+      rooms.forEach(room => {
+        const isOccupied = room.participants.length > 1;
+        const statusIcon = room.isLocked ? '<i class="fas fa-lock text-red-500"></i>' : isOccupied ? '<i class="fas fa-users text-yellow-500"></i>' : '<i class="fas fa-check-circle text-green-500"></i>';
+        const roomDiv = document.createElement('div');
+        roomDiv.className = 'flex items-center justify-between p-2 bg-[#3c3836] rounded-sm hover:bg-[#504945] transition duration-150 cursor-pointer';
+        roomDiv.innerHTML = `
+          <div class="flex items-center space-x-2">
+            <span>${statusIcon}</span>
+            <div class="flex flex-col">
+              <span class="font-semibold">${room.id}</span>
+              <span class="text-xs text-gray-400">Created by: ${room.createdBy}</span>
+            </div>
+          </div>
+          <div class="flex space-x-2">
+            <button data-room-id="${room.id}" class="join-room-btn px-3 py-1 text-sm rounded-sm bg-blue-600 text-white hover:bg-blue-700">Join</button>
+            ${isAdmin ? `<button data-room-id="${room.id}" class="clear-chat-btn px-3 py-1 text-sm rounded-sm bg-red-600 text-white hover:bg-red-700">Clear Chat</button>` : ''}
+          </div>
+        `;
+        activeRoomsList.appendChild(roomDiv);
+      });
+      document.querySelectorAll('.join-room-btn').forEach(btn => btn.addEventListener('click', () => joinRoom(btn.dataset.roomId)));
+      document.querySelectorAll('.clear-chat-btn').forEach(btn => btn.addEventListener('click', () => {
+        passwordModalTitle.textContent = `Clear Chat for ${btn.dataset.roomId}`;
+        passwordModalText.textContent = `Enter admin password to clear chat for room ${btn.dataset.roomId}.`;
+        confirmBtn.dataset.action = 'clear-chat';
+        confirmBtn.dataset.roomId = btn.dataset.roomId;
+        passwordModal.classList.remove('hidden');
+      }));
+    };
+
+    const updateParticipantsList = () => {
+      if (!currentRoom) {
+        participantsList.innerHTML = 'No participants in this room.';
+        return;
+      }
+      participantsList.innerHTML = '';
+      currentRoom.participants.forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'flex items-center space-x-2 p-2 bg-[#3c3836] rounded-sm';
+        const audioIcon = p.isMuted ? '<i class="fas fa-microphone-slash"></i>' : '<i class="fas fa-microphone"></i>';
+        const videoIcon = p.isVideoOff ? '<i class="fas fa-video-slash"></i>' : '<i class="fas fa-video"></i>';
+        div.innerHTML = `
+          <i class="fas fa-user-circle text-lg"></i>
+          <span class="text-sm flex-1">${p.username === username ? `${p.username} (You)` : p.username}</span>
+          <span class="text-xs text-gray-400 space-x-2">${audioIcon} ${videoIcon}</span>
+        `;
+        participantsList.appendChild(div);
+      });
+    };
+
+    const updateUsersList = () => {
+      activeUsersList.innerHTML = users.length ? '' : '<p class="text-gray-500 text-sm">No active users.</p>';
+      users.forEach(u => {
+        const div = document.createElement('div');
+        div.className = 'flex items-center space-x-2 p-2 bg-[#3c3836] rounded-sm';
+        div.innerHTML = `
+          <i class="fas fa-user-circle text-lg"></i>
+          <span class="text-sm flex-1">${u.username}</span>
+        `;
+        activeUsersList.appendChild(div);
+      });
+    };
+
+    const displayMessage = (msg) => {
+      const div = document.createElement('div');
+      div.className = `message ${msg.sender === username ? 'my-message' : 'other-message'}`;
+      const sender = msg.sender === username ? 'You' : msg.sender;
+      if (msg.type === 'text') {
+        div.innerHTML = `<span class="font-bold">${sender}:</span> ${msg.text}`;
+      } else if (msg.type === 'file') {
+        const isImage = msg.fileType.startsWith('image/');
+        div.innerHTML = isImage
+          ? `<div class="flex flex-col"><span class="font-bold">${sender}:</span><img src="${msg.fileData}" alt="${msg.fileName}" class="mt-2 rounded-lg" style="max-width: 100%; max-height: 200px;"></div>`
+          : `<div class="flex flex-col"><span class="font-bold">${sender}:</span><a href="${msg.fileData}" download="${msg.fileName}" class="text-blue-400 hover:underline"><i class="fas fa-file-download mr-1"></i>${msg.fileName}</a></div>`;
+      }
+      chatContainer.appendChild(div);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    };
+
+    const displayDirectMessage = (msg) => {
+      const div = document.createElement('div');
+      div.className = `message ${msg.sender === username ? 'my-message' : 'other-message'}`;
+      const sender = msg.sender === username ? 'You' : msg.sender;
+      if (msg.type === 'text') {
+        div.innerHTML = `<span class="font-bold">${sender}:</span> ${msg.text}`;
+      } else if (msg.type === 'file') {
+        const isImage = msg.fileType.startsWith('image/');
+        div.innerHTML = isImage
+          ? `<div class="flex flex-col"><span class="font-bold">${sender}:</span><img src="${msg.fileData}" alt="${msg.fileName}" class="mt-2 rounded-lg" style="max-width: 100%; max-height: 200px;"></div>`
+          : `<div class="flex flex-col"><span class="font-bold">${sender}:</span><a href="${msg.fileData}" download="${msg.fileName}" class="text-blue-400 hover:underline"><i class="fas fa-file-download mr-1"></i>${msg.fileName}</a></div>`;
+      }
+      directMessageContainer.appendChild(div);
+      directMessageContainer.scrollTop = directMessageContainer.scrollHeight;
+    };
+
+    const updateAdminDashboard = () => {
+      userInfoList.innerHTML = users.length ? '' : '<p class="text-gray-500 text-sm">No users found.</p>';
+      users.forEach(u => {
+        const userMessages = messages.filter(m => m.sender === u.username);
+        const roomsJoined = rooms.filter(r => r.participants.some(p => p.username === u.username)).map(r => r.id);
+        const div = document.createElement('div');
+        div.className = 'user-stats';
+        div.innerHTML = `
+          <div class="flex flex-col space-y-2">
+            <span><strong>Username:</strong> ${u.username}</span>
+            <span><strong>IP Address:</strong> ${u.ipAddress || 'Not available'}</span>
+            <span><strong>Joined At:</strong> ${u.joinedAt}</span>
+            <span><strong>Messages Sent:</strong> ${userMessages.length}</span>
+            <span><strong>Rooms Joined:</strong> ${roomsJoined.join(', ') || 'None'}</span>
+            <div class="flex space-x-2">
+              ${u.currentRoom ? `<button class="kick-user-btn btn-danger px-3 py-1 text-sm rounded-sm bg-red-600 text-white hover:bg-red-700" data-username="${u.username}" data-room-id="${u.currentRoom}">Kick from Room</button>` : ''}
+              <button class="ban-user-btn btn-danger px-3 py-1 text-sm rounded-sm bg-red-600 text-white hover:bg-red-700" data-username="${u.username}">Ban User</button>
+              <button class="message-user-btn px-3 py-1 text-sm rounded-sm bg-blue-600 text-white hover:bg-blue-700" data-username="${u.username}">Message</button>
+            </div>
+          </div>
+        `;
+        userInfoList.appendChild(div);
+      });
+      document.querySelectorAll('.kick-user-btn').forEach(btn => btn.addEventListener('click', () => {
+        passwordModalTitle.textContent = `Kick User ${btn.dataset.username}`;
+        passwordModalText.textContent = `Enter admin password to kick ${btn.dataset.username} from room ${btn.dataset.roomId}.`;
+        confirmBtn.dataset.action = 'kick-user';
+        confirmBtn.dataset.username = btn.dataset.username;
+        confirmBtn.dataset.roomId = btn.dataset.roomId;
+        passwordModal.classList.remove('hidden');
+      }));
+      document.querySelectorAll('.ban-user-btn').forEach(btn => btn.addEventListener('click', () => {
+        passwordModalTitle.textContent = `Ban User ${btn.dataset.username}`;
+        passwordModalText.textContent = `Enter admin password to ban ${btn.dataset.username}.`;
+        confirmBtn.dataset.action = 'ban-user';
+        confirmBtn.dataset.username = btn.dataset.username;
+        passwordModal.classList.remove('hidden');
+      }));
+      document.querySelectorAll('.message-user-btn').forEach(btn => btn.addEventListener('click', () => {
+        if (!isAdmin) return;
+        showDirectMessageModal(btn.dataset.username);
+      }));
+
+      scheduledMeetingsList.innerHTML = meetings.length ? '' : '<p class="text-gray-500 text-sm">No scheduled meetings.</p>';
+      meetings.forEach(m => {
+        const div = document.createElement('div');
+        div.className = 'p-2 bg-[#3c3836] rounded-sm';
+        div.innerHTML = `
+          <span><strong>Title:</strong> ${m.title}</span><br>
+          <span><strong>Time:</strong> ${new Date(m.time).toLocaleString()}</span>
+        `;
+        scheduledMeetingsList.appendChild(div);
+      });
+    };
+
+    const showDirectMessageModal = (recipient) => {
+      if (!isAdmin || !users.find(u => u.username === recipient)) {
+        showMessage('Cannot message this user.', true);
+        return;
+      }
+      currentDirectRecipient = recipient;
+      directMessageTitle.textContent = `Direct Message to ${recipient}`;
+      directMessageContainer.innerHTML = '';
+      directMessages
+        .filter(m => 
+          (m.sender === username && m.recipient === recipient) || 
+          (m.sender === recipient && m.recipient === username)
+        )
+        .forEach(displayDirectMessage);
+      directMessageModal.classList.remove('hidden');
+      directChatInput.focus();
+    };
+
+    // Core Functions
+    const setUsername = async () => {
+      username = usernameInput.value.trim();
+      if (!username) {
+        showMessage('Please enter a username.', true);
+        return;
+      }
+      // Show loading bar and disable inputs
+      loadingBar.classList.remove('hidden');
+      submitUsernameBtn.disabled = true;
+      usernameInput.disabled = true;
+      let ipAddress = 'Not available';
+      try {
+        // Try ipapi.co first
+        let response = await fetch('https://ipapi.co/json/');
+        let data = await response.json();
+        ipAddress = data.ip || 'Not available';
+      } catch (error) {
+        console.error('Error fetching IP from ipapi.co:', error.message);
+        // Fallback to ipify.org
+        try {
+          let response = await fetch('https://api.ipify.org?format=json');
+          let data = await response.json();
+          ipAddress = data.ip || 'Not available';
+        } catch (fallbackError) {
+          console.error('Error fetching IP from ipify.org:', fallbackError.message);
+          showMessage('Failed to fetch IP address.', true);
+        }
+      }
+      // Hide loading bar and enable UI
+      loadingBar.classList.add('hidden');
+      submitUsernameBtn.disabled = false;
+      usernameInput.disabled = false;
+      usernamePrompt.classList.add('hidden');
+      mainApp.classList.remove('hidden');
+      authStatus.textContent = `User: ${username}`;
+      users.push({ username, ipAddress, joinedAt: new Date().toLocaleString(), currentRoom: null });
+      updateUsersList();
+      createRoomBtn.disabled = false;
+      joinRoomBtn.disabled = false;
+      deleteAllRoomsBtn.disabled = false;
+    };
+
+    const createRoom = () => {
+      if (!username) return;
+      let roomId = roomIdInput.value.trim();
+      // Validate custom room name
+      if (roomId) {
+        if (!/^[a-zA-Z0-9-_]+$/.test(roomId)) {
+          showMessage('Invalid room name. Use only letters, numbers, hyphens, or underscores.', true);
+          return;
+        }
+        if (rooms.some(r => r.id.toLowerCase() === roomId.toLowerCase())) {
+          showMessage('Room name already exists.', true);
+          return;
+        }
+      } else {
+        // Generate random ID if no custom name provided
+        roomId = `room-${Math.random().toString(36).substring(2, 9)}`;
+      }
+      rooms.push({
+        id: roomId,
+        createdBy: username,
+        participants: [{ username, isMuted: joinMutedCheckbox.checked, isVideoOff: joinMutedCheckbox.checked }],
+        isLocked: false
+      });
+      joinRoom(roomId);
+    };
+
+    const joinRoom = (roomId) => {
+      const room = rooms.find(r => r.id === roomId);
+      if (!room) {
+        showMessage('Room does not exist.', true);
+        return;
+      }
+      if (room.isLocked) {
+        showMessage('Room is locked.', true);
+        return;
+      }
+      currentRoom = room;
+      roomIdInput.value = roomId;
+      room.participants.push({ username, isMuted: joinMutedCheckbox.checked, isVideoOff: joinMutedCheckbox.checked });
+      users.find(u => u.username === username).currentRoom = roomId;
+      updateRoomsList();
+      updateParticipantsList();
+      updateUsersList();
+      showMessage(`Joined room ${roomId}`);
+      createRoomBtn.disabled = true;
+      joinRoomBtn.disabled = true;
+      hangupBtn.disabled = false;
+      toggleAudioBtn.disabled = false;
+      toggleVideoBtn.disabled = false;
+      screenShareBtn.disabled = false;
+      fullScreenBtn.disabled = false;
+      sideBySideBtn.disabled = false;
+      lockRoomBtn.disabled = false;
+      videoQualitySelect.disabled = false;
+      sendChatBtn.disabled = false;
+      startRecordingBtn.disabled = false;
+    };
+
+    const hangup = () => {
+      if (currentRoom) {
+        currentRoom.participants = currentRoom.participants.filter(p => p.username !== username);
+        if (currentRoom.participants.length === 0) {
+          rooms = rooms.filter(r => r.id !== currentRoom.id);
+        }
+        users.find(u => u.username === username).currentRoom = null;
+        currentRoom = null;
+        messages = messages.filter(m => m.roomId !== roomIdInput.value);
+        chatContainer.innerHTML = '';
+        updateRoomsList();
+        updateParticipantsList();
+        updateUsersList();
+      }
+      roomIdInput.value = '';
+      createRoomBtn.disabled = false;
+      joinRoomBtn.disabled = false;
+      hangupBtn.disabled = true;
+      toggleAudioBtn.disabled = true;
+      toggleVideoBtn.disabled = true;
+      screenShareBtn.disabled = true;
+      fullScreenBtn.disabled = true;
+      sideBySideBtn.disabled = true;
+      lockRoomBtn.disabled = true;
+      videoQualitySelect.disabled = true;
+      sendChatBtn.disabled = true;
+      startRecordingBtn.disabled = true;
+      stopRecordingBtn.disabled = true;
+      localVideo.poster = 'https://via.placeholder.com/150x112?text=Local+Video';
+      remoteVideo.poster = 'https://via.placeholder.com/1280x720?text=Remote+Video';
+      showMessage('Left room.');
+    };
+
+    const toggleAudio = () => {
+      if (!currentRoom) return;
+      const participant = currentRoom.participants.find(p => p.username === username);
+      participant.isMuted = !participant.isMuted;
+      toggleAudioBtn.innerHTML = participant.isMuted ? '<i class="fas fa-microphone-slash"></i> Unmute Audio' : '<i class="fas fa-microphone"></i> Mute Audio';
+      toggleAudioBtn.classList.toggle('bg-[#b8bb26]', participant.isMuted);
+      toggleAudioBtn.classList.toggle('text-[#1d2021]', participant.isMuted);
+      updateParticipantsList();
+    };
+
+    const toggleVideo = () => {
+      if (!currentRoom) return;
+      const participant = currentRoom.participants.find(p => p.username === username);
+      participant.isVideoOff = !participant.isVideoOff;
+      toggleVideoBtn.innerHTML = participant.isVideoOff ? '<i class="fas fa-video-slash"></i> Turn On Video' : '<i class="fas fa-video"></i> Mute Video';
+      toggleVideoBtn.classList.toggle('bg-[#b8bb26]', participant.isVideoOff);
+      toggleVideoBtn.classList.toggle('text-[#1d2021]', participant.isVideoOff);
+      localVideo.poster = participant.isVideoOff ? 'https://via.placeholder.com/150x112?text=Video+Off' : 'https://via.placeholder.com/150x112?text=Local+Video';
+      updateParticipantsList();
+    };
+
+    const toggleScreenShare = () => {
+      isScreenSharing = !isScreenSharing;
+      screenShareBtn.textContent = isScreenSharing ? 'Stop Sharing' : 'Screen Share';
+      localVideo.poster = isScreenSharing ? 'https://via.placeholder.com/150x112?text=Screen+Share' : 'https://via.placeholder.com/150x112?text=Local+Video';
+      showMessage(isScreenSharing ? 'Screen sharing started.' : 'Screen sharing stopped.');
+    };
+
+    const toggleSideBySide = () => {
+      isSideBySide = !isSideBySide;
+      if (isSideBySide) {
+        localVideo.style.width = '50%';
+        localVideo.style.height = '100%';
+        localVideo.style.top = '0';
+        localVideo.style.left = '0';
+        localVideo.style.bottom = 'auto';
+        localVideo.style.right = 'auto';
+        remoteVideo.style.width = '50%';
+        remoteVideo.style.left = '50%';
+      } else {
+        localVideo.style.width = '150px';
+        localVideo.style.height = '112.5px';
+        localVideo.style.bottom = '1rem';
+        localVideo.style.right = '1rem';
+        localVideo.style.top = 'auto';
+        localVideo.style.left = 'auto';
+        remoteVideo.style.width = '100%';
+        remoteVideo.style.left = '0';
+      }
+      showMessage(isSideBySide ? 'Switched to side-by-side view.' : 'Switched to normal view.');
+    };
+
+    const startRecording = () => {
+      isRecording = true;
+      recordedChunks = [];
+      startRecordingBtn.disabled = true;
+      stopRecordingBtn.disabled = false;
+      showMessage('Recording started...');
+      setTimeout(() => {
+        if (isRecording) {
+          recordedChunks.push(new Blob(['Simulated video data'], { type: 'video/webm' }));
+        }
+      }, 5000);
+    };
+
+    const stopRecording = () => {
+      if (!isRecording) return;
+      isRecording = false;
+      startRecordingBtn.disabled = false;
+      stopRecordingBtn.disabled = true;
+      const blob = new Blob(recordedChunks, { type: 'video/webm' });
+      const url = URL.createObjectURL(blob);
+      const a = document.getElementById('downloadRecording');
+      a.href = url;
+      a.download = `recording-${Date.now()}.webm`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showMessage('Recording downloaded.');
+    };
+
+    const sendMessage = (mode = 'room', type = 'text', fileData = null) => {
+      if (mode === 'room' && !currentRoom) return;
+      if (mode === 'direct' && !currentDirectRecipient) return;
+      if (type === 'text') {
+        const text = mode === 'room' ? chatInput.value.trim() : directChatInput.value.trim();
+        if (!text) return;
+        const message = {
+          sender: username,
+          type,
+          text,
+          timestamp: new Date().toISOString()
+        };
+        if (mode === 'room') {
+          message.roomId = currentRoom.id;
+          messages.push(message);
+          messages.filter(m => m.roomId === currentRoom.id).forEach(displayMessage);
+          chatInput.value = '';
+        } else {
+          message.recipient = currentDirectRecipient;
+          directMessages.push(message);
+          directMessages
+            .filter(m => 
+              (m.sender === username && m.recipient === currentDirectRecipient) || 
+              (m.sender === currentDirectRecipient && m.recipient === username)
+            )
+            .forEach(displayDirectMessage);
+          directChatInput.value = '';
+        }
+      } else if (type === 'file') {
+        const message = {
+          sender: username,
+          type,
+          fileName: fileData.name,
+          fileType: fileData.type,
+          fileData: fileData.data,
+          timestamp: new Date().toISOString()
+        };
+        if (mode === 'room') {
+          message.roomId = currentRoom.id;
+          messages.push(message);
+          messages.filter(m => m.roomId === currentRoom.id).forEach(displayMessage);
+        } else {
+          message.recipient = currentDirectRecipient;
+          directMessages.push(message);
+          directMessages
+            .filter(m => 
+              (m.sender === username && m.recipient === currentDirectRecipient) || 
+              (m.sender === currentDirectRecipient && m.recipient === username)
+            )
+            .forEach(displayDirectMessage);
+        }
+      }
+    };
+
+    const handleFileUpload = (file) => {
+      if (file.size > 10485760) {
+        showMessage('File too large. Max size is 10MB.', true);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => sendMessage('room', 'file', { name: file.name, type: file.type, data: e.target.result });
+      reader.readAsDataURL(file);
+    };
+
+    const handleDirectFileUpload = (file) => {
+      if (file.size > 10485760) {
+        showMessage('File too large. Max size is 10MB.', true);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => sendMessage('direct', 'file', { name: file.name, type: file.type, data: e.target.result });
+      reader.readAsDataURL(file);
+    };
+
+    const toggleRoomLock = () => {
+      if (!currentRoom) return;
+      currentRoom.isLocked = !currentRoom.isLocked;
+      lockRoomBtn.textContent = currentRoom.isLocked ? 'Unlock Room' : 'Lock Room';
+      lockRoomBtn.classList.toggle('bg-[#b8bb26]', currentRoom.isLocked);
+      lockRoomBtn.classList.toggle('text-[#1d2021]', currentRoom.isLocked);
+      showMessage(currentRoom.isLocked ? 'Room locked.' : 'Room unlocked.');
+      updateRoomsList();
+    };
+
+    const deleteAllRooms = () => {
+      rooms = [];
+      messages = [];
+      users.forEach(u => u.currentRoom = null);
+      currentRoom = null;
+      chatContainer.innerHTML = '';
+      updateRoomsList();
+      updateParticipantsList();
+      updateUsersList();
+      hangup();
+      showMessage('All rooms deleted.');
+    };
+
+    const handleAdminLogin = () => {
+      if (adminUsernameInput.value === 'max' && adminPasswordInput.value === 'max1') {
+        isAdmin = true;
+        adminLoginModal.classList.add('hidden');
+        adminLoginBtn.textContent = 'Admin Dashboard';
+        adminLoginBtn.classList.add('bg-[#b8bb26]', 'text-[#1d2021]');
+        showMessage('Admin login successful.');
+        showAdminDashboard();
+      } else {
+        showMessage('Invalid admin credentials.', true);
+      }
+      adminUsernameInput.value = '';
+      adminPasswordInput.value = '';
+    };
+
+    const showAdminDashboard = () => {
+      adminDashboardModal.classList.remove('hidden');
+      updateAdminDashboard();
+    };
+
+    const handleModalAction = () => {
+      if (passwordInput.value !== 'max1') {
+        showMessage('Incorrect password.', true);
+        passwordModal.classList.add('hidden');
+        passwordInput.value = '';
+        return;
+      }
+      const action = confirmBtn.dataset.action;
+      if (action === 'delete-all') {
+        deleteAllRooms();
+      } else if (action === 'create-room') {
+        createRoom();
+      } else if (action === 'kick-user') {
+        const room = rooms.find(r => r.id === confirmBtn.dataset.roomId);
+        if (room) {
+          room.participants = room.participants.filter(p => p.username !== confirmBtn.dataset.username);
+          if (room.participants.length === 0) {
+            rooms = rooms.filter(r => r.id !== room.id);
+          }
+          users.find(u => u.username === confirmBtn.dataset.username).currentRoom = null;
+          if (currentRoom && currentRoom.id === confirmBtn.dataset.roomId) updateParticipantsList();
+          updateRoomsList();
+          updateUsersList();
+          showMessage(`User ${confirmBtn.dataset.username} kicked.`);
+        }
+      } else if (action === 'ban-user') {
+        users = users.filter(u => u.username !== confirmBtn.dataset.username);
+        rooms.forEach(r => r.participants = r.participants.filter(p => p.username !== confirmBtn.dataset.username));
+        rooms = rooms.filter(r => r.participants.length > 0);
+        if (currentRoom) updateParticipantsList();
+        updateRoomsList();
+        updateUsersList();
+        showMessage(`User ${confirmBtn.dataset.username} banned.`);
+      } else if (action === 'clear-chat') {
+        messages = messages.filter(m => m.roomId !== confirmBtn.dataset.roomId);
+        if (currentRoom && currentRoom.id === confirmBtn.dataset.roomId) chatContainer.innerHTML = '';
+        showMessage(`Chat for room ${confirmBtn.dataset.roomId} cleared.`);
+      } else if (action === 'lock-all') {
+        rooms.forEach(r => r.isLocked = true);
+        updateRoomsList();
+        showMessage('All rooms locked.');
+      } else if (action === 'unlock-all') {
+        rooms.forEach(r => r.isLocked = false);
+        updateRoomsList();
+        showMessage('All rooms unlocked.');
+      }
+      passwordModal.classList.add('hidden');
+      passwordInput.value = '';
+      updateAdminDashboard();
+    };
+
+    const scheduleMeeting = () => {
+      const title = meetingTitleInput.value.trim();
+      const time = meetingTimeInput.value;
+      if (!title || !time) {
+        showMessage('Please enter meeting title and time.', true);
+        return;
+      }
+      meetings.push({ title, time: new Date(time).toISOString() });
+      meetingTitleInput.value = '';
+      meetingTimeInput.value = '';
+      updateAdminDashboard();
+      showMessage(`Meeting "${title}" scheduled.`);
+    };
+
+    // Event Listeners
+    submitUsernameBtn.addEventListener('click', setUsername);
+    usernameInput.addEventListener('keydown', e => { if (e.key === 'Enter') setUsername(); });
+    createRoomBtn.addEventListener('click', () => {
+      passwordModalTitle.textContent = 'Create Room';
+      passwordModalText.textContent = 'Enter admin password to create a room.';
+      confirmBtn.dataset.action = 'create-room';
+      passwordModal.classList.remove('hidden');
+    });
+    joinRoomBtn.addEventListener('click', () => joinRoom(roomIdInput.value));
+    hangupBtn.addEventListener('click', hangup);
+    toggleAudioBtn.addEventListener('click', toggleAudio);
+    toggleVideoBtn.addEventListener('click', toggleVideo);
+    screenShareBtn.addEventListener('click', toggleScreenShare);
+    fullScreenBtn.addEventListener('click', () => remoteVideo.requestFullscreen());
+    sideBySideBtn.addEventListener('click', toggleSideBySide);
+    videoQualitySelect.addEventListener('change', () => {
+      showMessage(`Video quality changed to ${videoQualitySelect.value}`);
+      localVideo.poster = `https://via.placeholder.com/150x112?text=${videoQualitySelect.value}`;
+    });
+    volumeControl.addEventListener('input', () => remoteVideo.volume = volumeControl.value / 100);
+    startRecordingBtn.addEventListener('click', startRecording);
+    stopRecordingBtn.addEventListener('click', stopRecording);
+    fileUploadBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', e => handleFileUpload(e.target.files[0]));
+    sendChatBtn.addEventListener('click', () => sendMessage('room', 'text'));
+    chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage('room', 'text'); });
+    lockRoomBtn.addEventListener('click', toggleRoomLock);
+    deleteAllRoomsBtn.addEventListener('click', () => {
+      passwordModalTitle.textContent = 'Delete All Rooms';
+      passwordModalText.textContent = 'Enter admin password to delete all rooms.';
+      confirmBtn.dataset.action = 'delete-all';
+      passwordModal.classList.remove('hidden');
+    });
+    adminLoginBtn.addEventListener('click', () => isAdmin ? showAdminDashboard() : adminLoginModal.classList.remove('hidden'));
+    adminLoginConfirmBtn.addEventListener('click', handleAdminLogin);
+    adminLoginCancelBtn.addEventListener('click', () => {
+      adminLoginModal.classList.add('hidden');
+      adminUsernameInput.value = '';
+      adminPasswordInput.value = '';
+    });
+    adminDashboardCloseBtn.addEventListener('click', () => adminDashboardModal.classList.add('hidden'));
+    lockAllRoomsBtn.addEventListener('click', () => {
+      passwordModalTitle.textContent = 'Lock All Rooms';
+      passwordModalText.textContent = 'Enter admin password to lock all rooms.';
+      confirmBtn.dataset.action = 'lock-all';
+      passwordModal.classList.remove('hidden');
+    });
+    unlockAllRoomsBtn.addEventListener('click', () => {
+      passwordModalTitle.textContent = 'Unlock All Rooms';
+      passwordModalText.textContent = 'Enter admin password to unlock all rooms.';
+      confirmBtn.dataset.action = 'unlock-all';
+      passwordModal.classList.remove('hidden');
+    });
+    refreshUserDataBtn.addEventListener('click', updateAdminDashboard);
+    scheduleMeetingBtn.addEventListener('click', scheduleMeeting);
+    confirmBtn.addEventListener('click', handleModalAction);
+    cancelBtn.addEventListener('click', () => {
+      passwordModal.classList.add('hidden');
+      passwordInput.value = '';
+    });
+    sendDirectChatBtn.addEventListener('click', () => sendMessage('direct', 'text'));
+    directChatInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage('direct', 'text'); });
+    directFileUploadBtn.addEventListener('click', () => directFileInput.click());
+    directFileInput.addEventListener('change', e => handleDirectFileUpload(e.target.files[0]));
+    directMessageCloseBtn.addEventListener('click', () => {
+      directMessageModal.classList.add('hidden');
+      currentDirectRecipient = null;
+      directMessageContainer.innerHTML = '';
+      directChatInput.value = '';
+    });
+  </script>
+</body>
+</html>
