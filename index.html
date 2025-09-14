@@ -1300,8 +1300,6 @@ return;
 }
 if (action === 'delete-all') {
 await deleteAllRooms();
-} else if (action === 'create-room') {
-await createRoom();
 } else if (action === 'admin-dashboard') {
 isAdmin = true;
 mainApp.style.display = 'none';
@@ -1359,12 +1357,7 @@ submitUsernameBtn.addEventListener('click', setUsername);
 usernameInput.addEventListener('keydown', (e) => {
 if (e.key === 'Enter') setUsername();
 });
-createRoomBtn.addEventListener('click', () => {
-passwordModalTitle.textContent = 'Create a New Room';
-passwordModalText.textContent = 'Please enter the administrator password to create a room.';
-confirmBtn.dataset.action = 'create-room';
-passwordModal.classList.remove('hidden');
-});
+createRoomBtn.addEventListener('click', createRoom);
 joinRoomBtn.addEventListener('click', joinRoom);
 hangupBtn.addEventListener('click', hangup);
 toggleAudioBtn.addEventListener('click', toggleAudio);
