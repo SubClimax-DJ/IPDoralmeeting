@@ -396,7 +396,7 @@
         </div>
 
         <div class="container-card">
-            <h2 class="text-xl font-bold font-['Crimson_Pro'] mb-4">Active Users</h2>
+            <h2 class="text-xl font-bold font-['Crimson_Pro'] mb-4">All Users</h2>
             <button id="clearPublicChatBtn" class="btn-danger w-full mb-4 px-6 py-3 font-semibold rounded-sm">Clear Waiting Room Chat</button>
             <div id="adminActiveUsersList" class="space-y-2 text-gray-400 text-sm">
                 <p>Loading users...</p>
@@ -669,15 +669,17 @@
             listenForActiveUsers();
             listenForPublicChat();
             
-            // Get IP address and set the active user document
+            // Get IP address and user agent and set the active user document
             const ipAddress = await getPublicIpAddress();
+            const userAgent = navigator.userAgent;
             const activeUsersRef = doc(db, `artifacts/${appId}/public/data/active-users`, userId);
             await setDoc(activeUsersRef, {
                 username,
                 timestamp: serverTimestamp(),
                 isOnline: true,
-                ipAddress
-            });
+                ipAddress,
+                userAgent
+            }, {merge: true});
         };
 
         /** Switches the UI to the admin view. */
@@ -1284,6 +1286,8 @@
                 timestamp: serverTimestamp(),
                 type: 'text'
             });
+            // Update last active time
+            await updateDoc(doc(db, `artifacts/${appId}/public/data/active-users`, userId), { lastActive: serverTimestamp() });
             publicChatInput.value = '';
         };
 
@@ -1299,6 +1303,8 @@
                 timestamp: serverTimestamp(),
                 type: 'text'
             });
+            // Update last active time
+            await updateDoc(doc(db, `artifacts/${appId}/public/data/active-users`, userId), { lastActive: serverTimestamp() });
             roomChatInput.value = '';
         };
 
@@ -1527,9 +1533,10 @@
             adminUsersListener = onSnapshot(activeUsersRef, (snapshot) => {
                 adminActiveUsersList.innerHTML = '';
                 totalUsers.textContent = snapshot.size;
-                const users = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })).filter(user => user.isOnline);
+                const users = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })); // Removed the filter to show all users
                 if (users.length > 0) {
                     users.forEach(user => {
+                        const onlineStatus = user.isOnline ? '<span class="text-green-500">&#9679;</span> Online' : '<span class="text-red-500">&#9679;</span> Offline';
                         const userDiv = document.createElement('div');
                         userDiv.className = 'flex items-center justify-between p-2 bg-[#3c3836] rounded-sm';
                         userDiv.innerHTML = `
@@ -1538,6 +1545,7 @@
                                 <div class="flex flex-col">
                                     <span class="text-sm flex-1">${user.username}</span>
                                     <span class="text-xs text-gray-400">IP: ${user.ipAddress || 'Unknown'}</span>
+                                    <span class="text-xs">${onlineStatus} | Last Active: ${user.lastActive ? new Date(user.lastActive.seconds * 1000).toLocaleString() : 'N/A'} | Agent: ${user.userAgent || 'Unknown'}</span>
                                 </div>
                             </div>
                             <button data-user-id="${user.id}" data-user-name="${user.username}" class="kick-user-btn btn-danger text-xs px-2 py-1">Kick</button>
@@ -1914,11 +1922,8 @@
                     const roomId = e.target.dataset.roomId;
                     massVideoOffParticipants(roomId, true);
                 }
-                if (e.target.id === 'clearPublicChatBtn') {
-                    passwordModalTitle.textContent = 'Clear Waiting Room Chat';
-                    passwordModalText.textContent = 'Enter the admin password to clear all messages in the public chat.';
-                    confirmBtn.dataset.action = 'clear-public-chat';
-                    passwordModal.classList.remove('hidden');
+                if (e.target.dataset.action === 'clear-public-chat') {
+                    clearPublicChat();
                 }
                  if (e.target.dataset.action === 'clear-room-chat') {
                     const roomId = e.target.dataset.roomId;
@@ -1964,6 +1969,13 @@
                 }
             });
             sendAnnouncementBtn.addEventListener('click', sendAnnouncement);
+            refreshAdminDataBtn.addEventListener('click', refreshAdminData);
+            clearPublicChatBtn.addEventListener('click', () => {
+                 passwordModalTitle.textContent = 'Clear Waiting Room Chat';
+                 passwordModalText.textContent = 'Enter the admin password to clear all messages in the public chat.';
+                 confirmBtn.dataset.action = 'clear-public-chat';
+                 passwordModal.classList.remove('hidden');
+            });
         });
 
     </script>
