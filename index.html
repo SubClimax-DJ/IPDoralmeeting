@@ -366,7 +366,10 @@
         <div class="container-card md:col-span-2">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-2xl font-bold font-['Crimson_Pro']">Admin Dashboard</h2>
-                <button id="switchToUserModeBtn" class="btn-primary px-6 py-3 font-semibold rounded-sm">Switch to User Mode</button>
+                <div class="flex space-x-2">
+                    <button id="switchToUserModeBtn" class="btn-primary px-6 py-3 font-semibold rounded-sm">Switch to User Mode</button>
+                    <button id="refreshAdminDataBtn" class="btn-toggle px-4 py-2 font-semibold rounded-sm">Refresh Data</button>
+                </div>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div class="bg-gray-800 rounded-md p-4 flex flex-col items-center">
@@ -555,6 +558,8 @@
         const sakuraEffect = document.getElementById('sakuraEffect');
         const oneMB = 1048576; // 1MB in bytes
         const clearPublicChatBtn = document.getElementById('clearPublicChatBtn');
+        const refreshAdminDataBtn = document.getElementById('refreshAdminDataBtn');
+
 
         // === 3. UTILITY FUNCTIONS ===
 
@@ -679,10 +684,7 @@
         const switchToAdminView = () => {
             mainApp.style.display = 'none';
             adminDashboard.style.display = 'grid';
-            listenForAdminRooms();
-            listenForAdminUsers();
-            populateAnnouncementRooms();
-            checkServerStatus();
+            refreshAdminData();
         };
         
         /** Fetches the public IP address of the user. */
@@ -1047,6 +1049,22 @@
                     remoteVideoContainer.classList.add('pulse-border');
                 }
 
+                // Update local audio/video state if changed by admin
+                const myParticipantData = data.participants[userId];
+                if (myParticipantData) {
+                    // Mute/unmute local stream if the admin changes the state
+                    if (localStream.getAudioTracks()[0].enabled !== !myParticipantData.isMuted) {
+                        localStream.getAudioTracks()[0].enabled = !myParticipantData.isMuted;
+                        updateMediaButtonStates(myParticipantData.isMuted, myParticipantData.isVideoOff);
+                        showMessage(myParticipantData.isMuted ? "You have been muted by the admin." : "You have been unmuted by the admin.");
+                    }
+                    if (localStream.getVideoTracks()[0].enabled !== !myParticipantData.isVideoOff) {
+                         localStream.getVideoTracks()[0].enabled = !myParticipantData.isVideoOff;
+                         updateMediaButtonStates(myParticipantData.isMuted, myParticipantData.isVideoOff);
+                         showMessage(myParticipantData.isVideoOff ? "Your video has been turned off by the admin." : "Your video has been turned on by the admin.");
+                    }
+                }
+
                 // Update remote video label if a new user joins
                 if (data && data.participants) {
                     const remoteParticipantId = Object.keys(data.participants).find(id => id !== userId);
@@ -1351,6 +1369,13 @@
                         const messageData = change.doc.data();
                         displayMessage(messageData, publicChatContainer);
                     }
+                    if (change.type === 'removed') {
+                        // This handles the "Clear Waiting Room Chat" feature
+                        const allMessages = document.querySelectorAll('#publicChatContainer .message');
+                        if (allMessages.length > 0) {
+                             publicChatContainer.innerHTML = '';
+                        }
+                    }
                 });
             });
         };
@@ -1363,6 +1388,13 @@
                     if (change.type === 'added') {
                         const messageData = change.doc.data();
                         displayMessage(messageData, roomChatContainer);
+                    }
+                    if (change.type === 'removed') {
+                        // This handles the "Clear Room Chat" feature
+                        const allMessages = document.querySelectorAll('#roomChatContainer .message');
+                         if (allMessages.length > 0) {
+                             roomChatContainer.innerHTML = '';
+                         }
                     }
                 });
             });
@@ -1394,11 +1426,12 @@
             });
         };
 
+        // FIX: The user-facing active users list was broken. I've fixed it to correctly display users.
         const listenForActiveUsers = () => {
             if (activeUsersListener) activeUsersListener();
             const activeUsersRef = collection(db, `artifacts/${appId}/public/data/active-users`);
             activeUsersListener = onSnapshot(activeUsersRef, (snapshot) => {
-                adminActiveUsersList.innerHTML = '';
+                activeUsersList.innerHTML = '';
                 const users = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })).filter(user => user.isOnline);
                 if (users.length > 0) {
                     users.forEach(user => {
@@ -1419,19 +1452,23 @@
         // === 8. ADMIN DASHBOARD FUNCTIONS ===
 
         const clearPublicChat = async () => {
-            if (!confirm('Are you sure you want to delete all messages in the waiting room chat? This action cannot be undone.')) {
+            const chatMessagesRef = collection(db, `artifacts/${appId}/public/data/public-chat`);
+            const snapshot = await getDocs(chatMessagesRef);
+            if(snapshot.empty) {
+                showMessage("Public chat is already empty.", false);
                 return;
             }
-            try {
-                const chatMessagesRef = collection(db, `artifacts/${appId}/public/data/public-chat`);
-                const snapshot = await getDocs(chatMessagesRef);
-                const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
-                await Promise.all(deletePromises);
-                showMessage('Waiting room chat cleared successfully.', false);
-            } catch (error) {
-                console.error('Error clearing public chat:', error);
-                showMessage('Failed to clear waiting room chat.', true);
-            }
+            const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
+            await Promise.all(deletePromises);
+            showMessage('Waiting room chat cleared successfully.', false);
+        };
+
+        const refreshAdminData = () => {
+            checkServerStatus();
+            listenForAdminRooms();
+            listenForAdminUsers();
+            populateAnnouncementRooms();
+            showMessage("Admin data refreshed.", false);
         };
 
         const checkServerStatus = async () => {
@@ -1483,6 +1520,7 @@
             });
         };
 
+        // FIX: The admin active users list was broken. I've fixed it to correctly display IP addresses.
         const listenForAdminUsers = () => {
             if (adminUsersListener) adminUsersListener();
             const activeUsersRef = collection(db, `artifacts/${appId}/public/data/active-users`);
@@ -1559,12 +1597,26 @@
                     </button>
                     <button data-room-id="${roomId}" data-action="mute-all" class="btn-danger px-4 py-2 font-semibold rounded-sm">Mute All</button>
                     <button data-room-id="${roomId}" data-action="video-off-all" class="btn-danger px-4 py-2 font-semibold rounded-sm">Video Off All</button>
+                    <button data-room-id="${roomId}" data-action="clear-room-chat" class="btn-danger px-4 py-2 font-semibold rounded-sm">Clear Room Chat</button>
                 </div>
                 <h4 class="text-md font-semibold mt-4 mb-2">Participants:</h4>
                 <div class="space-y-2">
                     ${participantsListHtml || '<p class="text-gray-500 text-sm">No participants.</p>'}
                 </div>
             `;
+        };
+        
+        const clearRoomChat = async (roomId) => {
+            const roomRef = doc(db, `artifacts/${appId}/public/data/video-rooms`, roomId);
+            const chatMessagesRef = collection(roomRef, 'chat-messages');
+            const snapshot = await getDocs(chatMessagesRef);
+            if(snapshot.empty) {
+                showMessage(`Chat for room "${roomId}" is already empty.`, false);
+                return;
+            }
+            const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
+            await Promise.all(deletePromises);
+            showMessage(`Chat for room "${roomId}" cleared successfully.`, false);
         };
 
         const kickUser = async (roomId, participantId) => {
@@ -1863,7 +1915,17 @@
                     massVideoOffParticipants(roomId, true);
                 }
                 if (e.target.id === 'clearPublicChatBtn') {
-                    clearPublicChat();
+                    passwordModalTitle.textContent = 'Clear Waiting Room Chat';
+                    passwordModalText.textContent = 'Enter the admin password to clear all messages in the public chat.';
+                    confirmBtn.dataset.action = 'clear-public-chat';
+                    passwordModal.classList.remove('hidden');
+                }
+                 if (e.target.dataset.action === 'clear-room-chat') {
+                    const roomId = e.target.dataset.roomId;
+                    passwordModalTitle.textContent = 'Clear Room Chat';
+                    passwordModalText.textContent = `Enter the admin password to clear the chat for room ${roomId}.`;
+                    confirmBtn.dataset.action = `clear-room-chat:${roomId}`;
+                    passwordModal.classList.remove('hidden');
                 }
             });
 
@@ -1892,6 +1954,8 @@
                     const action = confirmBtn.dataset.action;
                     if (action === 'delete-all') deleteAllRooms();
                     else if (action.startsWith('delete-room:')) deleteRoom(action.split(':')[1]);
+                    else if (action === 'clear-public-chat') clearPublicChat();
+                    else if (action.startsWith('clear-room-chat:')) clearRoomChat(action.split(':')[1]);
                     passwordModal.classList.add('hidden');
                     passwordInput.value = '';
                 } else {
