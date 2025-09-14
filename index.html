@@ -280,7 +280,7 @@
         <button id="unlockAllRoomsBtn" class="px-4 py-2 font-semibold rounded-sm transition duration-300 bg-[#504945] text-[#ebdbb2]">Unlock All Rooms</button>
         <button id="refreshUserDataBtn" class="px-6 py-3 font-semibold rounded-sm transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-[#458588] text-[#ebdbb2]">Refresh Data</button>
       </div>
-      <h3 class="text-lg font-semibold">All Registered Users</h3>
+      <h3 class="text-lg font-semibold">All Users</h3>
       <div id="userInfoList" class="space-y-4 max-h-[50vh] overflow-y-auto">
         <p class="text-gray-500 text-sm">No users found.</p>
       </div>
@@ -311,21 +311,6 @@
     </div>
   </div>
 
-  <!-- Direct Message Modal -->
-  <div id="directMessageModal" class="modal-overlay hidden">
-    <div class="modal-content flex flex-col space-y-4">
-      <h2 class="text-xl font-bold font-['Crimson_Pro']" id="directMessageTitle">Direct Message</h2>
-      <div class="chat-container mb-4" id="directMessageContainer" style="height: 300px;"></div>
-      <div class="flex space-x-2 items-center">
-        <input type="file" id="directFileInput" class="hidden" accept="image/*,.pdf,.txt" />
-        <button id="directFileUploadBtn" class="px-4 py-2 font-semibold rounded-sm transition duration-300 bg-[#504945] text-[#ebdbb2]"><i class="fas fa-paperclip"></i></button>
-        <input type="text" id="directChatInput" placeholder="Send a direct message..." class="w-full px-4 py-3 rounded-sm border border-gray-600 focus:outline-none focus:ring-2 transition duration-200 bg-[#32302f] text-[#ebdbb2] flex-1" />
-        <button id="sendDirectChatBtn" class="px-6 py-3 font-semibold rounded-sm transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-[#458588] text-[#ebdbb2]">Send</button>
-      </div>
-      <button id="directMessageCloseBtn" class="px-4 py-2 font-semibold rounded-sm transition duration-300 bg-[#504945] text-[#ebdbb2]">Close</button>
-    </div>
-  </div>
-
   <!-- Status Message -->
   <div id="status-message" class="fixed bottom-4 left-1/2 -translate-x-1/2 p-4 rounded-lg text-sm text-center text-gray-700 bg-gray-100 hidden"></div>
 
@@ -341,14 +326,13 @@
     let currentRoom = null;
     let rooms = [];
     let users = [];
+    let pastUsers = [];
     let messages = [];
-    let directMessages = [];
     let meetings = [];
     let isScreenSharing = false;
     let isSideBySide = false;
     let isRecording = false;
     let recordedChunks = [];
-    let currentDirectRecipient = null;
 
     // UI Elements
     const usernamePrompt = document.getElementById('usernamePrompt');
@@ -406,14 +390,6 @@
     const passwordInput = document.getElementById('passwordInput');
     const confirmBtn = document.getElementById('confirmBtn');
     const cancelBtn = document.getElementById('cancelBtn');
-    const directMessageModal = document.getElementById('directMessageModal');
-    const directMessageTitle = document.getElementById('directMessageTitle');
-    const directMessageContainer = document.getElementById('directMessageContainer');
-    const directChatInput = document.getElementById('directChatInput');
-    const sendDirectChatBtn = document.getElementById('sendDirectChatBtn');
-    const directFileInput = document.getElementById('directFileInput');
-    const directFileUploadBtn = document.getElementById('directFileUploadBtn');
-    const directMessageCloseBtn = document.getElementById('directMessageCloseBtn');
 
     // Utility Functions
     const showMessage = (msg, isError = false) => {
@@ -504,25 +480,9 @@
       chatContainer.scrollTop = chatContainer.scrollHeight;
     };
 
-    const displayDirectMessage = (msg) => {
-      const div = document.createElement('div');
-      div.className = `message ${msg.sender === username ? 'my-message' : 'other-message'}`;
-      const sender = msg.sender === username ? 'You' : msg.sender;
-      if (msg.type === 'text') {
-        div.innerHTML = `<span class="font-bold">${sender}:</span> ${msg.text}`;
-      } else if (msg.type === 'file') {
-        const isImage = msg.fileType.startsWith('image/');
-        div.innerHTML = isImage
-          ? `<div class="flex flex-col"><span class="font-bold">${sender}:</span><img src="${msg.fileData}" alt="${msg.fileName}" class="mt-2 rounded-lg" style="max-width: 100%; max-height: 200px;"></div>`
-          : `<div class="flex flex-col"><span class="font-bold">${sender}:</span><a href="${msg.fileData}" download="${msg.fileName}" class="text-blue-400 hover:underline"><i class="fas fa-file-download mr-1"></i>${msg.fileName}</a></div>`;
-      }
-      directMessageContainer.appendChild(div);
-      directMessageContainer.scrollTop = directMessageContainer.scrollHeight;
-    };
-
     const updateAdminDashboard = () => {
-      userInfoList.innerHTML = users.length ? '' : '<p class="text-gray-500 text-sm">No users found.</p>';
-      users.forEach(u => {
+      userInfoList.innerHTML = pastUsers.length ? '' : '<p class="text-gray-500 text-sm">No users found.</p>';
+      pastUsers.forEach(u => {
         const userMessages = messages.filter(m => m.sender === u.username);
         const roomsJoined = rooms.filter(r => r.participants.some(p => p.username === u.username)).map(r => r.id);
         const div = document.createElement('div');
@@ -532,12 +492,12 @@
             <span><strong>Username:</strong> ${u.username}</span>
             <span><strong>IP Address:</strong> ${u.ipAddress || 'Not available'}</span>
             <span><strong>Joined At:</strong> ${u.joinedAt}</span>
+            <span><strong>Status:</strong> ${u.status}</span>
             <span><strong>Messages Sent:</strong> ${userMessages.length}</span>
             <span><strong>Rooms Joined:</strong> ${roomsJoined.join(', ') || 'None'}</span>
             <div class="flex space-x-2">
-              ${u.currentRoom ? `<button class="kick-user-btn btn-danger px-3 py-1 text-sm rounded-sm bg-red-600 text-white hover:bg-red-700" data-username="${u.username}" data-room-id="${u.currentRoom}">Kick from Room</button>` : ''}
-              <button class="ban-user-btn btn-danger px-3 py-1 text-sm rounded-sm bg-red-600 text-white hover:bg-red-700" data-username="${u.username}">Ban User</button>
-              <button class="message-user-btn px-3 py-1 text-sm rounded-sm bg-blue-600 text-white hover:bg-blue-700" data-username="${u.username}">Message</button>
+              ${u.status === 'Active' && u.currentRoom ? `<button class="kick-user-btn btn-danger px-3 py-1 text-sm rounded-sm bg-red-600 text-white hover:bg-red-700" data-username="${u.username}" data-room-id="${u.currentRoom}">Kick from Room</button>` : ''}
+              ${u.status === 'Active' ? `<button class="ban-user-btn btn-danger px-3 py-1 text-sm rounded-sm bg-red-600 text-white hover:bg-red-700" data-username="${u.username}">Ban User</button>` : ''}
             </div>
           </div>
         `;
@@ -558,10 +518,6 @@
         confirmBtn.dataset.username = btn.dataset.username;
         passwordModal.classList.remove('hidden');
       }));
-      document.querySelectorAll('.message-user-btn').forEach(btn => btn.addEventListener('click', () => {
-        if (!isAdmin) return;
-        showDirectMessageModal(btn.dataset.username);
-      }));
 
       scheduledMeetingsList.innerHTML = meetings.length ? '' : '<p class="text-gray-500 text-sm">No scheduled meetings.</p>';
       meetings.forEach(m => {
@@ -573,24 +529,6 @@
         `;
         scheduledMeetingsList.appendChild(div);
       });
-    };
-
-    const showDirectMessageModal = (recipient) => {
-      if (!isAdmin || !users.find(u => u.username === recipient)) {
-        showMessage('Cannot message this user.', true);
-        return;
-      }
-      currentDirectRecipient = recipient;
-      directMessageTitle.textContent = `Direct Message to ${recipient}`;
-      directMessageContainer.innerHTML = '';
-      directMessages
-        .filter(m => 
-          (m.sender === username && m.recipient === recipient) || 
-          (m.sender === recipient && m.recipient === username)
-        )
-        .forEach(displayDirectMessage);
-      directMessageModal.classList.remove('hidden');
-      directChatInput.focus();
     };
 
     // Core Functions
@@ -630,7 +568,9 @@
       mainApp.classList.remove('hidden');
       authStatus.textContent = `User: ${username}`;
       users.push({ username, ipAddress, joinedAt: new Date().toLocaleString(), currentRoom: null });
+      pastUsers.push({ username, ipAddress, joinedAt: new Date().toLocaleString(), currentRoom: null, status: 'Active' });
       updateUsersList();
+      updateAdminDashboard();
       createRoomBtn.disabled = false;
       joinRoomBtn.disabled = false;
       deleteAllRoomsBtn.disabled = false;
@@ -676,9 +616,11 @@
       roomIdInput.value = roomId;
       room.participants.push({ username, isMuted: joinMutedCheckbox.checked, isVideoOff: joinMutedCheckbox.checked });
       users.find(u => u.username === username).currentRoom = roomId;
+      pastUsers.find(u => u.username === username).currentRoom = roomId;
       updateRoomsList();
       updateParticipantsList();
       updateUsersList();
+      updateAdminDashboard();
       showMessage(`Joined room ${roomId}`);
       createRoomBtn.disabled = true;
       joinRoomBtn.disabled = true;
@@ -701,12 +643,14 @@
           rooms = rooms.filter(r => r.id !== currentRoom.id);
         }
         users.find(u => u.username === username).currentRoom = null;
+        pastUsers.find(u => u.username === username).currentRoom = null;
         currentRoom = null;
         messages = messages.filter(m => m.roomId !== roomIdInput.value);
         chatContainer.innerHTML = '';
         updateRoomsList();
         updateParticipantsList();
         updateUsersList();
+        updateAdminDashboard();
       }
       roomIdInput.value = '';
       createRoomBtn.disabled = false;
@@ -807,34 +751,21 @@
       showMessage('Recording downloaded.');
     };
 
-    const sendMessage = (mode = 'room', type = 'text', fileData = null) => {
-      if (mode === 'room' && !currentRoom) return;
-      if (mode === 'direct' && !currentDirectRecipient) return;
+    const sendMessage = (type = 'text', fileData = null) => {
+      if (!currentRoom) return;
       if (type === 'text') {
-        const text = mode === 'room' ? chatInput.value.trim() : directChatInput.value.trim();
+        const text = chatInput.value.trim();
         if (!text) return;
         const message = {
           sender: username,
           type,
           text,
+          roomId: currentRoom.id,
           timestamp: new Date().toISOString()
         };
-        if (mode === 'room') {
-          message.roomId = currentRoom.id;
-          messages.push(message);
-          messages.filter(m => m.roomId === currentRoom.id).forEach(displayMessage);
-          chatInput.value = '';
-        } else {
-          message.recipient = currentDirectRecipient;
-          directMessages.push(message);
-          directMessages
-            .filter(m => 
-              (m.sender === username && m.recipient === currentDirectRecipient) || 
-              (m.sender === currentDirectRecipient && m.recipient === username)
-            )
-            .forEach(displayDirectMessage);
-          directChatInput.value = '';
-        }
+        messages.push(message);
+        messages.filter(m => m.roomId === currentRoom.id).forEach(displayMessage);
+        chatInput.value = '';
       } else if (type === 'file') {
         const message = {
           sender: username,
@@ -842,22 +773,11 @@
           fileName: fileData.name,
           fileType: fileData.type,
           fileData: fileData.data,
+          roomId: currentRoom.id,
           timestamp: new Date().toISOString()
         };
-        if (mode === 'room') {
-          message.roomId = currentRoom.id;
-          messages.push(message);
-          messages.filter(m => m.roomId === currentRoom.id).forEach(displayMessage);
-        } else {
-          message.recipient = currentDirectRecipient;
-          directMessages.push(message);
-          directMessages
-            .filter(m => 
-              (m.sender === username && m.recipient === currentDirectRecipient) || 
-              (m.sender === currentDirectRecipient && m.recipient === username)
-            )
-            .forEach(displayDirectMessage);
-        }
+        messages.push(message);
+        messages.filter(m => m.roomId === currentRoom.id).forEach(displayMessage);
       }
     };
 
@@ -867,17 +787,7 @@
         return;
       }
       const reader = new FileReader();
-      reader.onload = (e) => sendMessage('room', 'file', { name: file.name, type: file.type, data: e.target.result });
-      reader.readAsDataURL(file);
-    };
-
-    const handleDirectFileUpload = (file) => {
-      if (file.size > 10485760) {
-        showMessage('File too large. Max size is 10MB.', true);
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = (e) => sendMessage('direct', 'file', { name: file.name, type: file.type, data: e.target.result });
+      reader.onload = (e) => sendMessage('file', { name: file.name, type: file.type, data: e.target.result });
       reader.readAsDataURL(file);
     };
 
@@ -889,17 +799,20 @@
       lockRoomBtn.classList.toggle('text-[#1d2021]', currentRoom.isLocked);
       showMessage(currentRoom.isLocked ? 'Room locked.' : 'Room unlocked.');
       updateRoomsList();
+      updateAdminDashboard();
     };
 
     const deleteAllRooms = () => {
       rooms = [];
       messages = [];
       users.forEach(u => u.currentRoom = null);
+      pastUsers.forEach(u => { if (u.status === 'Active') u.currentRoom = null; });
       currentRoom = null;
       chatContainer.innerHTML = '';
       updateRoomsList();
       updateParticipantsList();
       updateUsersList();
+      updateAdminDashboard();
       hangup();
       showMessage('All rooms deleted.');
     };
@@ -944,18 +857,23 @@
             rooms = rooms.filter(r => r.id !== room.id);
           }
           users.find(u => u.username === confirmBtn.dataset.username).currentRoom = null;
-          if (currentRoom && currentRoom.id === confirmBtn.dataset.roomId) updateParticipantsList();
+          pastUsers.find(u => u.username === confirmBtn.dataset.username).currentRoom = null;
           updateRoomsList();
+          updateParticipantsList();
           updateUsersList();
+          updateAdminDashboard();
           showMessage(`User ${confirmBtn.dataset.username} kicked.`);
         }
       } else if (action === 'ban-user') {
         users = users.filter(u => u.username !== confirmBtn.dataset.username);
+        const pastUser = pastUsers.find(u => u.username === confirmBtn.dataset.username);
+        if (pastUser) pastUser.status = 'Banned';
         rooms.forEach(r => r.participants = r.participants.filter(p => p.username !== confirmBtn.dataset.username));
         rooms = rooms.filter(r => r.participants.length > 0);
         if (currentRoom) updateParticipantsList();
         updateRoomsList();
         updateUsersList();
+        updateAdminDashboard();
         showMessage(`User ${confirmBtn.dataset.username} banned.`);
       } else if (action === 'clear-chat') {
         messages = messages.filter(m => m.roomId !== confirmBtn.dataset.roomId);
@@ -1014,8 +932,8 @@
     stopRecordingBtn.addEventListener('click', stopRecording);
     fileUploadBtn.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', e => handleFileUpload(e.target.files[0]));
-    sendChatBtn.addEventListener('click', () => sendMessage('room', 'text'));
-    chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage('room', 'text'); });
+    sendChatBtn.addEventListener('click', () => sendMessage('text'));
+    chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage('text'); });
     lockRoomBtn.addEventListener('click', toggleRoomLock);
     deleteAllRoomsBtn.addEventListener('click', () => {
       passwordModalTitle.textContent = 'Delete All Rooms';
@@ -1049,16 +967,6 @@
     cancelBtn.addEventListener('click', () => {
       passwordModal.classList.add('hidden');
       passwordInput.value = '';
-    });
-    sendDirectChatBtn.addEventListener('click', () => sendMessage('direct', 'text'));
-    directChatInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage('direct', 'text'); });
-    directFileUploadBtn.addEventListener('click', () => directFileInput.click());
-    directFileInput.addEventListener('change', e => handleDirectFileUpload(e.target.files[0]));
-    directMessageCloseBtn.addEventListener('click', () => {
-      directMessageModal.classList.add('hidden');
-      currentDirectRecipient = null;
-      directMessageContainer.innerHTML = '';
-      directChatInput.value = '';
     });
   </script>
 </body>
