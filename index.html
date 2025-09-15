@@ -1,1983 +1,432 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Doral Video Conference</title>
+    <title>Virtual Parent-Teacher Conferences</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600&family=Lato:wght@400;700&display=swap');
-
-        :root {
-            --bg-dark: #282828;
-            --bg-header: #1d2021;
-            --bg-card: #32302f;
-            --bg-chat: #3c3836;
-            --color-text: #ebdbb2;
-            --color-primary: #458588;
-            --color-danger: #fb4934;
-            --color-toggle: #504945;
-            --color-toggle-active: #b8bb26;
-            --color-black: #1d2021;
-        }
-
         body {
-            font-family: 'Lato', sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--color-text);
-            background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://i.postimg.cc/9fYYq5K9/image.png');
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 1rem;
+            font-family: 'Inter', sans-serif;
         }
-
-        .header {
-            background-color: var(--bg-header);
-            color: var(--color-text);
+        .chat-bubble {
+            max-width: 75%;
         }
-
-        .container-card {
-            background-color: var(--bg-card);
-            border-radius: 0.5rem;
-            padding: 2rem;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        .chat-bubble-me {
+            background-color: #458588; /* Gruvbox Blue */
+            color: #282828;
         }
-
-        .btn-primary {
-            background-color: var(--color-primary);
-            color: var(--color-text);
-            transition: transform 0.3s ease;
+        .chat-bubble-other {
+            background-color: #7c6f64; /* Gruvbox Gray */
+            color: #ebdbb2;
         }
-
-        .btn-primary:hover {
-            transform: scale(1.05);
+        /* Custom scrollbar for chat */
+        .chat-messages::-webkit-scrollbar {
+            width: 8px;
         }
-
-        .btn-danger {
-            background-color: var(--color-danger);
-            color: var(--color-text);
-            transition: transform 0.3s ease;
+        .chat-messages::-webkit-scrollbar-track {
+            background: #282828;
         }
-
-        .btn-danger:hover {
-            transform: scale(1.05);
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #665c54;
+            border-radius: 4px;
         }
-
-        .btn-toggle {
-            background-color: var(--color-toggle);
-            color: var(--color-text);
-            transition: background-color 0.3s ease, color 0.3s ease;
-        }
-
-        .btn-toggle-active {
-            background-color: var(--color-toggle-active);
-            color: var(--color-black);
-        }
-
-        .input-field {
-            background-color: var(--bg-card);
-            color: var(--color-text);
-            border: 1px solid #6b7280;
-            transition: box-shadow 0.2s ease, border-color 0.2s ease;
-        }
-
-        .input-field:focus {
-            outline: none;
-            box-shadow: 0 0 0 2px var(--color-primary);
-            border-color: var(--color-primary);
-        }
-
-        .video-feed-container {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            width: 100%;
-        }
-
-        .video-box {
-            position: relative;
-            background-color: var(--bg-header);
-            border-radius: 0.5rem;
-            overflow: hidden;
-            border: 2px solid transparent;
-            height: 300px;
-        }
-
-        .video-box.active-border {
-            border: 2px solid var(--color-primary);
-        }
-        
-        .video-box.active-border.pulse-border {
-            animation: pulse-border 2s infinite;
-        }
-
-        .video-element {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .chat-container {
-            background-color: var(--bg-chat);
-            border: 1px solid var(--color-toggle);
-            border-radius: 0.5rem;
-            height: 500px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column-reverse;
-        }
-
-        .message {
-            padding: 0.5rem 1rem;
-            margin: 0.5rem;
-            border-radius: 0.75rem;
-            max-width: 85%;
-            word-wrap: break-word;
-        }
-
-        .my-message {
-            background-color: var(--color-primary);
-            color: var(--color-text);
-            align-self: flex-end;
-        }
-
-        .other-message {
-            background-color: var(--color-toggle);
-            color: var(--color-text);
-            align-self: flex-start;
-        }
-
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 50;
-        }
-
-        .modal-content {
-            background-color: var(--bg-card);
-            padding: 2rem;
-            border-radius: 0.5rem;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
-            width: 90%;
-            max-width: 400px;
-        }
-
-        .sakura-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            overflow: hidden;
-            z-index: 20;
-        }
-
-        .sakura-petal {
-            position: absolute;
-            background: rgba(255, 192, 203, 0.8);
-            border-radius: 50%;
-            width: 10px;
-            height: 10px;
-            animation: falling 15s linear infinite;
-        }
-
-        @keyframes falling {
-            0% {
-                transform: translateY(-10vh) rotate(0deg);
-                opacity: 1;
-            }
-
-            100% {
-                transform: translateY(110vh) rotate(360deg);
-                opacity: 0;
-            }
-        }
-        @keyframes pulse-border {
-            0% {
-                box-shadow: 0 0 0 0 var(--color-primary);
-            }
-            50% {
-                box-shadow: 0 0 0 10px rgba(69, 133, 136, 0.2);
-            }
-            100% {
-                box-shadow: 0 0 0 0 var(--color-primary);
-            }
+        #screen-share-placeholder {
+            background-color: #1d2021;
+            background-image: repeating-linear-gradient(45deg, #3c3836 25%, transparent 25%, transparent 75%, #3c3836 75%, #3c3836), repeating-linear-gradient(45deg, #3c3836 25%, #1d2021 25%, #1d2021 75%, #3c3836 75%, #3c3836);
+            background-position: 0 0, 10px 10px;
+            background-size: 20px 20px;
+            border: 2px dashed #665c54;
         }
     </style>
 </head>
+<body class="bg-[#282828] text-[#ebdbb2] antialiased">
 
-<body class="flex flex-col items-center p-4">
-    <header class="header w-full py-4 mb-8 flex flex-col sm:flex-row items-center justify-between px-6 shadow-md">
-        <div class="flex items-center">
-            <img src="https://content.enrollmystudent.org/contact_school_logo/school_logo_1655490559.jpg" alt="School Logo" class="h-12 mr-4">
-            <div class="flex flex-col items-start">
-                <h1 class="text-3xl sm:text-4xl font-semibold font-['Crimson_Pro']">Doral Video Conference</h1>
-                <p class="text-sm font-light text-gray-400 mt-1">Created by Coach Prebeg</p>
+    <!-- App Container -->
+    <div id="app" class="h-screen w-screen flex items-center justify-center transition-opacity duration-500">
+
+        <!-- Login View -->
+        <div id="login-view" class="w-full max-w-md p-8 bg-[#3c3836] rounded-2xl shadow-xl border border-[#504945]">
+            <h1 class="text-3xl font-bold text-center mb-2 text-[#ebdbb2]">Office Hours</h1>
+            <p class="text-center text-[#a89984] mb-8">Please enter your name to join the lobby.</p>
+            <form id="login-form" class="space-y-6">
+                <div>
+                    <label for="name" class="text-sm font-medium text-[#d5c4a1]">Your Name</label>
+                    <input type="text" id="name" name="name" class="mt-1 block w-full px-4 py-3 bg-[#504945] border border-[#665c54] rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#83a598] focus:border-transparent text-[#ebdbb2] placeholder:text-[#a89984]" placeholder="e.g., Jane Doe" required>
+                </div>
+                <button type="submit" class="w-full bg-[#458588] hover:bg-[#83a598] text-[#282828] font-bold py-3 px-4 rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-150 ease-in-out">
+                    Join Waiting Room
+                </button>
+            </form>
+             <p class="text-xs text-center text-[#a89984] mt-4">Teacher: Enter your name and add "(Teacher)"</p>
+        </div>
+
+        <!-- Lobby View -->
+        <div id="lobby-view" class="hidden h-screen w-screen flex flex-col p-4 md:p-6 lg:p-8 bg-[#282828]">
+            <header class="mb-6 flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-[#ebdbb2]">Lobby</h1>
+                    <p class="text-[#a89984]">Please wait for the teacher to start the conference.</p>
+                </div>
+                 <button id="leave-lobby-btn" class="bg-[#cc241d] hover:bg-[#fb4934] text-[#ebdbb2] font-bold py-2 px-4 rounded-lg shadow-md transition-transform duration-150 hover:scale-105">
+                    Leave
+                </button>
+            </header>
+            <div class="flex-grow grid grid-cols-1 lg:grid-cols-3 gap-6 h-full overflow-hidden">
+                <!-- Parents List -->
+                <div class="lg:col-span-1 bg-[#3c3836] border border-[#504945] rounded-2xl shadow-lg p-6 flex flex-col h-full">
+                    <h2 class="text-xl font-semibold mb-4 border-b border-[#504945] pb-3 text-[#ebdbb2]">Waiting Parents</h2>
+                    <ul id="parents-list" class="space-y-3 overflow-y-auto flex-grow pr-2">
+                        <!-- Parent items will be injected here -->
+                    </ul>
+                </div>
+                <!-- Lobby Chat -->
+                <div class="lg:col-span-2 bg-[#3c3836] border border-[#504945] rounded-2xl shadow-lg p-6 flex flex-col h-full">
+                    <h2 class="text-xl font-semibold mb-4 border-b border-[#504945] pb-3 text-[#ebdbb2]">Lobby Chat</h2>
+                    <div id="lobby-chat-messages" class="flex-grow space-y-4 overflow-y-auto p-4 bg-[#282828] rounded-lg mb-4 chat-messages">
+                        <!-- Chat messages will be injected here -->
+                    </div>
+                    <form id="lobby-chat-form" class="flex items-center gap-4">
+                        <input type="text" id="lobby-chat-input" class="flex-grow px-4 py-2 bg-[#504945] border border-[#665c54] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#83a598] text-[#ebdbb2] placeholder:text-[#a89984]" placeholder="Type a message..." required>
+                        <button type="submit" class="bg-[#458588] hover:bg-[#83a598] text-[#282828] font-bold py-2 px-4 rounded-lg shadow-md transition-transform duration-150 hover:scale-105">Send</button>
+                    </form>
+                </div>
             </div>
         </div>
-        <div class="text-sm mt-2 sm:mt-0 font-light" id="auth-status">Authenticating...</div>
-    </header>
 
-    <div id="loginPrompt" class="container-card absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4/5 md:w-1/2 flex flex-col items-center justify-center p-8">
-        <h2 class="text-2xl font-bold font-['Crimson_Pro'] mb-4">Login</h2>
-        <p class="text-sm text-gray-400 mb-6 text-center">Enter your name to proceed to the waiting room.</p>
-        <input type="text" id="usernameInput" placeholder="Username" class="input-field max-w-sm mb-4" />
-        <div class="flex items-center space-x-2 mb-4">
-            <input type="checkbox" id="adminLoginCheckbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
-            <label for="adminLoginCheckbox" class="text-sm">Login as Admin</label>
+        <!-- Conference View -->
+        <div id="conference-view" class="hidden h-screen w-screen flex flex-col bg-[#1d2021]">
+            <header class="p-4 flex justify-between items-center bg-[#3c3836] shadow-md border-b border-[#504945]">
+                <h1 class="text-2xl font-bold text-[#ebdbb2]">1-on-1 Conference</h1>
+                <button id="leave-conference-btn" class="bg-[#cc241d] hover:bg-[#fb4934] text-[#ebdbb2] font-bold py-2 px-4 rounded-lg shadow-md transition-transform duration-150 hover:scale-105">
+                    End Conference
+                </button>
+            </header>
+            <main class="flex-grow grid grid-cols-1 lg:grid-cols-3 gap-4 p-4 overflow-hidden">
+                <!-- Screen Share Area -->
+                <div class="lg:col-span-2 bg-[#3c3836] border border-[#504945] rounded-xl shadow-lg flex flex-col items-center justify-center p-4">
+                    <div id="screen-share-placeholder" class="w-full h-full rounded-lg flex items-center justify-center">
+                        <p class="text-[#a89984] text-lg">Screen Sharing Area</p>
+                    </div>
+                </div>
+                <!-- Conference Chat -->
+                <div class="lg:col-span-1 bg-[#3c3836] border border-[#504945] rounded-xl shadow-lg flex flex-col h-full">
+                     <h2 class="text-lg font-semibold p-4 border-b border-[#504945] text-[#ebdbb2]">Private Chat</h2>
+                    <div id="conference-chat-messages" class="flex-grow space-y-4 overflow-y-auto p-4 bg-[#282828] chat-messages">
+                        <!-- Private chat messages will be injected here -->
+                    </div>
+                    <form id="conference-chat-form" class="p-4 border-t border-[#504945] flex items-center gap-4">
+                        <input type="text" id="conference-chat-input" class="flex-grow px-4 py-2 bg-[#504945] border border-[#665c54] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#83a598] text-[#ebdbb2] placeholder:text-[#a89984]" placeholder="Type a message..." required>
+                        <button type="submit" class="bg-[#458588] hover:bg-[#83a598] text-[#282828] font-bold py-2 px-4 rounded-lg shadow-md transition-transform duration-150 hover:scale-105">Send</button>
+                    </form>
+                </div>
+            </main>
         </div>
-        <button id="submitLoginBtn" class="btn-primary px-6 py-3 font-semibold rounded-sm w-full max-w-xs">Login</button>
+
     </div>
 
-    <main id="mainApp" class="w-full max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-[1fr_2fr_1fr] md:gap-8 hidden">
-        <div class="space-y-8">
-            <div id="publicChatCard" class="container-card">
-                <h2 class="text-xl font-bold font-['Crimson_Pro'] mb-4">Waiting Room Chat</h2>
-                <div class="chat-container mb-4" id="publicChatContainer"></div>
-                <div class="flex space-x-2 items-center">
-                    <input type="file" id="publicFileInput" class="hidden" />
-                    <button id="publicFileUploadBtn" class="btn-toggle px-4 py-2 font-semibold rounded-sm focus:outline-none transition-colors"><i class="fas fa-paperclip"></i></button>
-                    <input type="text" id="publicChatInput" placeholder="Send a message..." class="input-field flex-1 px-4 py-3 rounded-sm" />
-                    <button id="sendPublicChatBtn" class="btn-primary px-6 py-3 font-semibold rounded-sm">Send</button>
-                </div>
-            </div>
-
-            <div id="roomChatCard" class="container-card hidden">
-                <h2 class="text-xl font-bold font-['Crimson_Pro'] mb-4">Room Chat</h2>
-                <div class="chat-container mb-4" id="roomChatContainer"></div>
-                <div class="flex space-x-2 items-center">
-                    <input type="file" id="roomFileInput" class="hidden" />
-                    <button id="roomFileUploadBtn" class="btn-toggle px-4 py-2 font-semibold rounded-sm focus:outline-none transition-colors" disabled><i class="fas fa-paperclip"></i></button>
-                    <input type="text" id="roomChatInput" placeholder="Send a message..." class="input-field flex-1 px-4 py-3 rounded-sm" disabled/>
-                    <button id="sendRoomChatBtn" class="btn-primary px-6 py-3 font-semibold rounded-sm" disabled>Send</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="container-card mt-8 md:mt-0">
-            <h2 class="text-xl font-bold font-['Crimson_Pro'] mb-4">Video Feed</h2>
-            <div class="video-feed-container">
-                <!-- Local video feed with name and icons overlay -->
-                <div id="localVideoContainer" class="video-box">
-                    <video id="localVideo" class="video-element" autoplay playsinline muted></video>
-                    <div id="localVideoLabel" class="absolute bottom-2 left-2 bg-gray-800 text-white text-xs px-2 py-1 rounded-md bg-opacity-70"></div>
-                    <div class="absolute top-2 right-2 flex space-x-2">
-                        <i id="localAudioIcon" class="fas fa-microphone text-green-500"></i>
-                        <i id="localVideoIcon" class="fas fa-video text-green-500"></i>
-                    </div>
-                </div>
-                <!-- Remote video feed with name and icons overlay, initially hidden -->
-                <div id="remoteVideoContainer" class="video-box hidden">
-                    <video id="remoteVideo" class="video-element" autoplay playsinline></video>
-                    <div id="remoteVideoLabel" class="absolute bottom-2 left-2 bg-gray-800 text-white text-xs px-2 py-1 rounded-md bg-opacity-70"></div>
-                    <div class="absolute top-2 right-2 flex space-x-2">
-                        <i id="remoteAudioIcon" class="fas fa-microphone-slash text-red-500"></i>
-                        <i id="remoteVideoIcon" class="fas fa-video-slash text-red-500"></i>
-                    </div>
-                </div>
-                <div id="sakuraEffect" class="sakura-container hidden"></div>
-            </div>
-            <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 items-center justify-center mt-4">
-                <button id="toggleAudioBtn" class="btn-toggle px-4 py-2 font-semibold rounded-sm focus:outline-none" disabled><i class="fas fa-microphone"></i> Mute Audio</button>
-                <button id="toggleVideoBtn" class="btn-toggle px-4 py-2 font-semibold rounded-sm focus:outline-none" disabled><i class="fas fa-video"></i> Mute Video</button>
-                <button id="screenShareBtn" class="btn-toggle px-4 py-2 font-semibold rounded-sm focus:outline-none" disabled><i class="fas fa-desktop"></i> Screen Share</button>
-                <button id="fullScreenBtn" class="btn-toggle px-4 py-2 font-semibold rounded-sm focus:outline-none" disabled><i class="fas fa-expand"></i> Fullscreen</button>
-                <button id="hangupBtn" class="btn-danger px-6 py-3 font-semibold rounded-sm" disabled>Leave Room</button>
-            </div>
-            <div class="flex mt-4 space-x-4 items-center justify-center">
-                <i class="fas fa-volume-down text-lg"></i>
-                <input type="range" id="volumeControl" min="0" max="100" value="100" class="flex-1 cursor-pointer">
-                <i class="fas fa-volume-up text-lg"></i>
-            </div>
-            <div class="flex mt-4 space-x-4 justify-center">
-                <button id="startRecordingBtn" class="btn-primary px-6 py-3 font-semibold rounded-sm" disabled>Start Recording</button>
-                <button id="stopRecordingBtn" class="btn-danger px-6 py-3 font-semibold rounded-sm" disabled>Stop Recording</button>
-            </div>
-            <a id="downloadRecording" style="display: none;"></a>
-        </div>
-
-        <div class="space-y-8 mt-8 md:mt-0">
-            <div class="container-card">
-                <h2 class="text-xl font-bold font-['Crimson_Pro'] mb-4">Room Management</h2>
-                <div class="flex flex-col space-y-4">
-                    <div class="flex space-x-2">
-                        <input type="text" id="roomIdInput" placeholder="Enter Room ID to Join" class="input-field flex-1" />
-                    </div>
-                    <button id="joinRoomBtn" class="btn-primary px-6 py-3 font-semibold rounded-sm" disabled>Join Room by ID</button>
-                    <div class="flex items-center space-x-2">
-                        <input type="checkbox" id="joinMutedCheckbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
-                        <label for="joinMutedCheckbox" class="text-sm">Join with camera/mic off</label>
-                    </div>
-                    <div class="flex items-center space-x-2">
-                        <label for="videoQualitySelect" class="text-sm">Video Quality:</label>
-                        <select id="videoQualitySelect" class="input-field flex-1 px-4 py-3 rounded-sm">
-                            <option value="480p">SD (480p)</option>
-                            <option value="720p">HD (720p)</option>
-                            <option value="1080p">Full HD (1080p)</option>
-                        </select>
-                    </div>
-                    <h3 class="text-lg font-bold font-['Crimson_Pro'] mt-4 mb-2">Create New Room</h3>
-                    <input type="text" id="newRoomNameInput" placeholder="Enter a name for the new room" class="input-field max-w-full" />
-                    <button id="createRoomBtn" class="btn-primary px-6 py-3 font-semibold rounded-sm" disabled>Create New Room</button>
-                    <button id="deleteAllRoomsBtn" class="btn-danger px-6 py-3 font-semibold rounded-sm" disabled>Delete All Rooms</button>
-                    <button id="lockRoomBtn" class="btn-toggle px-4 py-2 font-semibold rounded-sm focus:outline-none" disabled>Lock Room</button>
-                </div>
-            </div>
-
-            <div class="container-card">
-                <h2 class="text-xl font-bold font-['Crimson_Pro'] mb-4">Active Rooms</h2>
-                <div id="activeRoomsList" class="space-y-2">
-                    <p class="text-gray-500 text-sm">Loading rooms...</p>
-                </div>
-            </div>
-
-            <div class="container-card">
-                <h2 class="text-xl font-bold font-['Crimson_Pro'] mb-4">Participants</h2>
-                <div id="participantsList" class="space-y-2 text-gray-400 text-sm">
-                    No participants in this room.
-                </div>
-            </div>
-
-            <div class="container-card">
-                <h2 class="text-xl font-bold font-['Crimson_Pro'] mb-4">Active Users</h2>
-                <div id="activeUsersList" class="space-y-2 text-gray-400 text-sm">
-                    <p>Loading users...</p>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <main id="adminDashboard" class="w-full max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 hidden">
-        <div class="container-card md:col-span-2">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold font-['Crimson_Pro']">Admin Dashboard</h2>
-                <div class="flex space-x-2">
-                    <button id="switchToUserModeBtn" class="btn-primary px-6 py-3 font-semibold rounded-sm">Switch to User Mode</button>
-                    <button id="refreshAdminDataBtn" class="btn-toggle px-4 py-2 font-semibold rounded-sm">Refresh Data</button>
-                </div>
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div class="bg-gray-800 rounded-md p-4 flex flex-col items-center">
-                    <span class="text-4xl font-bold" id="totalRooms">0</span>
-                    <span class="text-sm text-gray-400">Active Rooms</span>
-                </div>
-                <div class="bg-gray-800 rounded-md p-4 flex flex-col items-center">
-                    <span class="text-4xl font-bold" id="totalUsers">0</span>
-                    <span class="text-sm text-gray-400">Active Users</span>
-                </div>
-                <div class="bg-gray-800 rounded-md p-4 flex flex-col items-center">
-                    <span class="text-sm font-semibold">Server Status</span>
-                    <span class="text-lg font-bold" id="serverStatus">Checking...</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="container-card">
-            <h2 class="text-xl font-bold font-['Crimson_Pro'] mb-4">Room List</h2>
-            <button id="adminDeleteAllRoomsBtn" class="btn-danger w-full mb-4 px-6 py-3 font-semibold rounded-sm">Delete All Rooms</button>
-            <div id="adminActiveRoomsList" class="space-y-2">
-                <p class="text-gray-500 text-sm">Loading rooms...</p>
-            </div>
-        </div>
-
-        <div class="container-card">
-            <h2 class="text-xl font-bold font-['Crimson_Pro'] mb-4">All Users</h2>
-            <button id="clearPublicChatBtn" class="btn-danger w-full mb-4 px-6 py-3 font-semibold rounded-sm">Clear Waiting Room Chat</button>
-            <div id="adminActiveUsersList" class="space-y-2 text-gray-400 text-sm">
-                <p>Loading users...</p>
-            </div>
-        </div>
-
-        <div class="container-card md:col-span-2">
-            <h2 class="text-xl font-bold font-['Crimson_Pro'] mb-4">Active Room Details</h2>
-            <div id="roomDetailsContainer" class="space-y-2">
-                <p class="text-gray-500 text-sm">Select a room to view details.</p>
-            </div>
-        </div>
-
-        <div class="container-card md:col-span-2">
-            <h2 class="text-xl font-bold font-['Crimson_Pro'] mb-4">Global Announcements</h2>
-            <div class="flex flex-col space-y-4">
-                <select id="announcementRoomId" class="input-field px-4 py-3 rounded-sm">
-                    <option value="all">Send to All Rooms</option>
-                </select>
-                <textarea id="announcementInput" placeholder="Enter your announcement..." class="input-field px-4 py-3 rounded-sm resize-none"></textarea>
-                <button id="sendAnnouncementBtn" class="btn-primary px-6 py-3 font-semibold rounded-sm">Send Announcement</button>
-            </div>
-        </div>
-    </main>
-
-    <div id="usernameModal" class="modal-overlay hidden">
-        <div class="modal-content flex flex-col space-y-4">
-            <h2 class="text-xl font-bold font-['Crimson_Pro']">Enter Username</h2>
-            <p class="text-sm text-gray-400">Please enter a username to switch to user mode.</p>
-            <input type="text" id="switchUsernameInput" placeholder="Username" class="input-field" />
-            <div class="flex space-x-4">
-                <button id="confirmSwitchBtn" class="btn-primary px-6 py-3 font-semibold rounded-sm flex-1">Confirm</button>
-                <button id="cancelSwitchBtn" class="btn-toggle px-4 py-2 font-semibold rounded-sm flex-1">Cancel</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="passwordModal" class="modal-overlay hidden">
-        <div class="modal-content flex flex-col space-y-4">
-            <h2 class="text-xl font-bold font-['Crimson_Pro']" id="passwordModalTitle">Confirm Action</h2>
-            <p class="text-sm text-gray-400" id="passwordModalText">Please enter the administrator password to proceed.</p>
-            <input type="password" id="passwordInput" placeholder="Password" class="input-field" />
-            <div class="flex space-x-4">
-                <button id="confirmBtn" class="btn-danger px-6 py-3 font-semibold rounded-sm flex-1" data-action="">Confirm</button>
-                <button id="cancelBtn" class="btn-toggle px-4 py-2 font-semibold rounded-sm flex-1">Cancel</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="status-message" class="fixed bottom-4 left-1/2 -translate-x-1/2 p-4 rounded-lg text-sm text-center text-gray-700 bg-gray-100 hidden"></div>
-
+    <!-- Firebase -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, getDocs, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, addDoc, query, serverTimestamp, orderBy, deleteDoc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-        // === 1. FIREBASE CONFIGURATION & GLOBAL STATE ===
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = {
-            apiKey: "AIzaSyBluS1Dl9abDJjPPeOhvTCfP8J1kyIh6BQ",
-            authDomain: "video-meeting-e73eb.firebaseapp.com",
-            projectId: "video-meeting-e73eb",
-            storageBucket: "video-meeting-e73eb.firebasestorage.app",
-            messagingSenderId: "80496795033",
-            appId: "1:80496795033:web:3ac35c631d76301f77c708",
-            measurementId: "G-SFPQ0PJRPG"
-        };
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        let app, db, auth, storage;
-        let userId, username, isAdmin = false;
-        let peerConnection = null, localStream = null, roomRef = null;
-        let roomSnapshotListener, candidatesListener, roomsListener, publicChatListener, roomChatListener, participantsListener, activeUsersListener, adminRoomsListener, adminUsersListener;
-        let isScreenSharing = false;
-        let mediaRecorder, recordedChunks = [];
-        const videoQualities = {
-            '480p': { width: { ideal: 640 }, height: { ideal: 480 } },
-            '720p': { width: { ideal: 1280 }, height: { ideal: 720 } },
-            '1080p': { width: { ideal: 1920 }, height: { ideal: 1080 } }
+        // --- DO NOT EDIT ---
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "YOUR_API_KEY", authDomain: "YOUR_AUTH_DOMAIN", projectId: "YOUR_PROJECT_ID" };
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-office-hours';
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : undefined;
+        // -------------------
+        
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const state = {
+            currentUser: null,
+            isTeacher: false,
+            currentConferenceId: null,
+            unsubscribers: [],
         };
 
-        const configuration = {
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' },
-            ]
-        };
-
-        // === 2. UI ELEMENTS (Cached DOM references) ===
-        const loginPrompt = document.getElementById('loginPrompt');
-        const mainApp = document.getElementById('mainApp');
-        const adminDashboard = document.getElementById('adminDashboard');
-        const usernameInput = document.getElementById('usernameInput');
-        const adminLoginCheckbox = document.getElementById('adminLoginCheckbox');
-        const submitLoginBtn = document.getElementById('submitLoginBtn');
-        const localVideo = document.getElementById('localVideo');
-        const remoteVideo = document.getElementById('remoteVideo');
-        const localVideoContainer = document.getElementById('localVideoContainer');
-        const remoteVideoContainer = document.getElementById('remoteVideoContainer');
-        const localVideoLabel = document.getElementById('localVideoLabel');
-        const remoteVideoLabel = document.getElementById('remoteVideoLabel');
-        const localAudioIcon = document.getElementById('localAudioIcon');
-        const localVideoIcon = document.getElementById('localVideoIcon');
-        const remoteAudioIcon = document.getElementById('remoteAudioIcon');
-        const remoteVideoIcon = document.getElementById('remoteVideoIcon');
-        const roomIdInput = document.getElementById('roomIdInput');
-        const newRoomNameInput = document.getElementById('newRoomNameInput');
-        const createRoomBtn = document.getElementById('createRoomBtn');
-        const joinRoomBtn = document.getElementById('joinRoomBtn');
-        const deleteAllRoomsBtn = document.getElementById('deleteAllRoomsBtn');
-        const lockRoomBtn = document.getElementById('lockRoomBtn');
-        const hangupBtn = document.getElementById('hangupBtn');
-        const toggleAudioBtn = document.getElementById('toggleAudioBtn');
-        const toggleVideoBtn = document.getElementById('toggleVideoBtn');
-        const screenShareBtn = document.getElementById('screenShareBtn');
-        const fullScreenBtn = document.getElementById('fullScreenBtn');
-        const volumeControl = document.getElementById('volumeControl');
-        const startRecordingBtn = document.getElementById('startRecordingBtn');
-        const stopRecordingBtn = document.getElementById('stopRecordingBtn');
-        const statusMessage = document.getElementById('status-message');
-        const authStatus = document.getElementById('auth-status');
-        const activeRoomsList = document.getElementById('activeRoomsList');
-        const joinMutedCheckbox = document.getElementById('joinMutedCheckbox');
-        const participantsList = document.getElementById('participantsList');
-        const activeUsersList = document.getElementById('activeUsersList');
-        const passwordModal = document.getElementById('passwordModal');
-        const passwordModalTitle = document.getElementById('passwordModalTitle');
-        const passwordModalText = document.getElementById('passwordModalText');
-        const passwordInput = document.getElementById('passwordInput');
-        const confirmBtn = document.getElementById('confirmBtn');
-        const cancelBtn = document.getElementById('cancelBtn');
-        const adminDeleteAllRoomsBtn = document.getElementById('adminDeleteAllRoomsBtn');
-        const switchToUserModeBtn = document.getElementById('switchToUserModeBtn');
-        const adminActiveRoomsList = document.getElementById('adminActiveRoomsList');
-        const adminActiveUsersList = document.getElementById('adminActiveUsersList');
-        const totalRooms = document.getElementById('totalRooms');
-        const totalUsers = document.getElementById('totalUsers');
-        const serverStatus = document.getElementById('serverStatus');
-        const usernameModal = document.getElementById('usernameModal');
-        const switchUsernameInput = document.getElementById('switchUsernameInput');
-        const confirmSwitchBtn = document.getElementById('confirmSwitchBtn');
-        const cancelSwitchBtn = document.getElementById('cancelSwitchBtn');
-        const roomDetailsContainer = document.getElementById('roomDetailsContainer');
-        const announcementRoomId = document.getElementById('announcementRoomId');
-        const announcementInput = document.getElementById('announcementInput');
-        const sendAnnouncementBtn = document.getElementById('sendAnnouncementBtn');
-        const publicChatCard = document.getElementById('publicChatCard');
-        const publicChatContainer = document.getElementById('publicChatContainer');
-        const publicChatInput = document.getElementById('publicChatInput');
-        const sendPublicChatBtn = document.getElementById('sendPublicChatBtn');
-        const publicFileInput = document.getElementById('publicFileInput');
-        const publicFileUploadBtn = document.getElementById('publicFileUploadBtn');
-        const roomChatCard = document.getElementById('roomChatCard');
-        const roomChatContainer = document.getElementById('roomChatContainer');
-        const roomChatInput = document.getElementById('roomChatInput');
-        const sendRoomChatBtn = document.getElementById('sendRoomChatBtn');
-        const roomFileInput = document.getElementById('roomFileInput');
-        const roomFileUploadBtn = document.getElementById('roomFileUploadBtn');
-        const sakuraEffect = document.getElementById('sakuraEffect');
-        const oneMB = 1048576; // 1MB in bytes
-        const clearPublicChatBtn = document.getElementById('clearPublicChatBtn');
-        const refreshAdminDataBtn = document.getElementById('refreshAdminDataBtn');
-
-
-        // === 3. UTILITY FUNCTIONS ===
-
-        /** Displays a status message to the user. */
-        const showMessage = (msg, isError = false) => {
-            statusMessage.textContent = msg;
-            statusMessage.className = `fixed bottom-4 left-1/2 -translate-x-1/2 p-4 rounded-lg text-sm text-center transition-all duration-300 transform animate-fade-in ${isError ? 'text-red-700 bg-red-100' : 'text-gray-700 bg-gray-100'}`;
-            statusMessage.style.display = 'block';
-            setTimeout(() => {
-                statusMessage.style.display = 'none';
-            }, 5000);
-        };
-
-        /** Adds a random sakura petal to the background. */
-        const addSakuraPetal = () => {
-            if (!sakuraEffect) return;
-            const petal = document.createElement('div');
-            petal.className = 'sakura-petal';
-            const size = Math.random() * 8 + 4;
-            const duration = Math.random() * 10 + 10;
-            const delay = Math.random() * 5;
-            const left = Math.random() * 100;
-            petal.style.width = `${size}px`;
-            petal.style.height = `${size}px`;
-            petal.style.animationDuration = `${duration}s`;
-            petal.style.animationDelay = `${delay}s`;
-            petal.style.left = `${left}vw`;
-            sakuraEffect.appendChild(petal);
-
-            setTimeout(() => {
-                petal.remove();
-            }, (duration + delay) * 1000);
-        };
-
-        /** Initializes Firebase and sets up authentication listeners. */
-        const initFirebase = () => {
-            try {
-                if (Object.keys(firebaseConfig).length === 0) {
-                    showMessage("Firebase configuration is missing. Authentication cannot proceed.", true);
-                    return;
-                }
-                app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                storage = getStorage(app);
-                
-                // The onAuthStateChanged listener is the single source of truth for auth state
-                onAuthStateChanged(auth, async (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        authStatus.textContent = isAdmin ? `Admin ID: ${userId}` : `User ID: ${userId}`;
-                        if (isAdmin) {
-                            switchToAdminView();
-                        } else {
-                            // Only switch to user view if a username has been set
-                            if (username) {
-                                switchToUserView();
-                            }
-                        }
-                    } else {
-                        // This block will run on initial load and after sign-out
-                        authStatus.textContent = 'Authenticating...';
-                        try {
-                            if (initialAuthToken) {
-                                console.log("Attempting sign-in with custom token...");
-                                await signInWithCustomToken(auth, initialAuthToken);
-                                console.log("Sign-in with custom token successful.");
-                            } else {
-                                console.log("No custom token found, attempting anonymous sign-in...");
-                                await signInAnonymously(auth);
-                                console.log("Anonymous sign-in successful.");
-                            }
-                        } catch (error) {
-                            console.error("Firebase Authentication Error:", error);
-                            // Only show an error if it's not the custom-token-mismatch, which is expected in some environments
-                            if (error.code !== 'auth/custom-token-mismatch') {
-                                showMessage("Authentication failed. Check the console for details.", true);
-                            }
-                            // The anonymous sign-in should handle the case where the custom token is invalid
-                            if (error.code === 'auth/custom-token-mismatch' && !auth.currentUser) {
-                                await signInAnonymously(auth);
-                            }
-                        }
+        // DOM Elements
+        const loginView = document.getElementById('login-view');
+        const lobbyView = document.getElementById('lobby-view');
+        const conferenceView = document.getElementById('conference-view');
+        
+        // --- Core Logic ---
+        
+        async function init() {
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    state.currentUser = user;
+                    // User is signed in. Now check if they have a profile.
+                    const userDoc = await getDoc(doc(db, `artifacts/${appId}/public/data/users`, user.uid));
+                    if(userDoc.exists()) {
+                        handleExistingSession(userDoc.data());
                     }
-                });
-            } catch (error) {
-                console.error("Firebase Initialization Error:", error);
-                showMessage(`Firebase initialization failed: ${error.message}`, true);
-            }
-        };
+                } else {
+                    // User is signed out.
+                    if(initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                }
+            });
 
-        /** Switches the UI to the user view. */
-        const switchToUserView = async () => {
-            if (!username) {
-                loginPrompt.style.display = 'flex';
-                mainApp.style.display = 'none';
-                adminDashboard.style.display = 'none';
-                return;
+            setupEventListeners();
+        }
+
+        function handleExistingSession(userData) {
+            state.isTeacher = userData.isTeacher;
+            if (userData.status === 'in-conference') {
+                showConferenceView(userData.conferenceId);
+            } else {
+                showLobbyView();
             }
-            loginPrompt.style.display = 'none';
-            adminDashboard.style.display = 'none';
-            mainApp.style.display = 'grid';
-            createRoomBtn.disabled = false;
-            joinRoomBtn.disabled = false;
-            deleteAllRoomsBtn.disabled = false;
-            listenForRooms();
-            listenForActiveUsers();
-            listenForPublicChat();
+        }
+        
+        function setupEventListeners() {
+            document.getElementById('login-form').addEventListener('submit', handleLogin);
+            document.getElementById('lobby-chat-form').addEventListener('submit', handleLobbyChat);
+            document.getElementById('conference-chat-form').addEventListener('submit', handleConferenceChat);
+            document.getElementById('leave-lobby-btn').addEventListener('click', handleLogout);
+            document.getElementById('leave-conference-btn').addEventListener('click', handleLeaveConference);
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const nameInput = document.getElementById('name');
+            let name = nameInput.value.trim();
+
+            if (!name || !state.currentUser) return;
             
-            // Get IP address and user agent and set the active user document
-            const ipAddress = await getPublicIpAddress();
-            const userAgent = navigator.userAgent;
-            const activeUsersRef = doc(db, `artifacts/${appId}/public/data/active-users`, userId);
-            await setDoc(activeUsersRef, {
-                username,
-                timestamp: serverTimestamp(),
-                isOnline: true,
-                ipAddress,
-                userAgent
-            }, {merge: true});
-        };
+            state.isTeacher = name.toLowerCase().includes('(teacher)');
+            if(state.isTeacher) {
+                name = name.replace(/\(teacher\)/i, '').trim();
+            }
 
-        /** Switches the UI to the admin view. */
-        const switchToAdminView = () => {
-            mainApp.style.display = 'none';
-            adminDashboard.style.display = 'grid';
-            refreshAdminData();
-        };
+            const userRef = doc(db, `artifacts/${appId}/public/data/users`, state.currentUser.uid);
+            await setDoc(userRef, {
+                name: name,
+                uid: state.currentUser.uid,
+                isTeacher: state.isTeacher,
+                status: 'lobby'
+            });
+
+            showLobbyView();
+        }
         
-        /** Fetches the public IP address of the user. */
-        const getPublicIpAddress = async () => {
-            try {
-                const response = await fetch('https://api.ipify.org?format=json');
-                const data = await response.json();
-                return data.ip || 'Unknown';
-            } catch (error) {
-                console.error("Failed to fetch IP address:", error);
-                return 'Unknown';
-            }
-        };
+        async function handleLogout() {
+             if (!state.currentUser) return;
+             const userRef = doc(db, `artifacts/${appId}/public/data/users`, state.currentUser.uid);
+             await deleteDoc(userRef);
+             resetUI();
+        }
 
-
-        // === 4. LOGIN & AUTHENTICATION HANDLERS ===
-
-        const handleLogin = async () => {
-            const input = usernameInput.value.trim();
-            if (!input) {
-                showMessage("Please enter a username or password.", true);
-                return;
-            }
-            if (adminLoginCheckbox.checked) {
-                if (input === 'max') {
-                    isAdmin = true;
-                    loginPrompt.style.display = 'none';
-                    switchToAdminView();
-                } else {
-                    showMessage("Incorrect admin password.", true);
-                }
-            } else {
-                username = input;
-                isAdmin = false;
-                localVideoLabel.textContent = username;
-                loginPrompt.style.display = 'none';
-                if (auth.currentUser) {
-                    switchToUserView();
-                }
-            }
-        };
-
-        const switchToUserMode = () => {
-            usernameModal.classList.remove('hidden');
-        };
-
-        const handleSwitchToUserMode = async () => {
-            const input = switchUsernameInput.value.trim();
-            if (!input) {
-                showMessage("Please enter a username.", true);
-                return;
-            }
-            username = input;
-            isAdmin = false;
-            usernameModal.classList.add('hidden');
-            switchUsernameInput.value = '';
-            localVideoLabel.textContent = username;
-            switchToUserView();
-            showMessage(`Switched to user mode as ${username}.`, false);
-        };
-
-        // === 5. WEBRTC & ROOM MANAGEMENT FUNCTIONS ===
-
-        const getLocalStream = async (startMuted) => {
-            try {
-                const selectedQuality = videoQualitySelect.value;
-                const constraints = {
-                    audio: true,
-                    video: videoQualities[selectedQuality]
-                };
-                localStream = await navigator.mediaDevices.getUserMedia(constraints);
-                localVideo.srcObject = localStream;
-                localVideo.muted = true;
-                if (startMuted) {
-                    localStream.getAudioTracks()[0].enabled = false;
-                    localStream.getVideoTracks()[0].enabled = false;
-                }
-                updateMediaButtonStates(!localStream.getAudioTracks()[0].enabled, !localStream.getVideoTracks()[0].enabled);
-                return localStream;
-            } catch (error) {
-                console.error("Error getting user media:", error);
-                if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
-                    showMessage("Access to camera/microphone was denied. Please check your browser's settings.", true);
-                } else {
-                    showMessage("Could not access camera and microphone. Please grant permissions.", true);
-                }
-                return null;
-            }
-        };
-
-        const setupPeerConnection = () => {
-            peerConnection = new RTCPeerConnection(configuration);
-            peerConnection.onicecandidate = (event) => {
-                if (event.candidate) {
-                    const candidatesCollection = collection(roomRef, 'candidates');
-                    addDoc(candidatesCollection, {
-                        candidate: JSON.stringify(event.candidate.toJSON()),
-                        sender: userId
-                    });
-                }
-            };
-            peerConnection.ontrack = (event) => {
-                if (event.streams && event.streams[0]) {
-                    remoteVideo.srcObject = event.streams[0];
-                    startRecordingBtn.disabled = false;
-                    remoteVideoContainer.classList.add('pulse-border', 'active-border');
-                    remoteVideoContainer.classList.remove('hidden');
-                }
-            };
-        };
-
-        const createRoom = async () => {
-            if (!username) {
-                showMessage("Please enter a username first.", true);
-                return;
-            }
-            const roomName = newRoomNameInput.value.trim();
-            if (!roomName) {
-                showMessage("Please enter a name for the new room.", true);
-                return;
-            }
+        async function handleStartConference(parentId) {
+            if (!state.isTeacher || !state.currentUser) return;
             
-            roomRef = doc(db, `artifacts/${appId}/public/data/video-rooms`, roomName);
-            showMessage("Creating room...");
+            const conferenceId = `conf_${state.currentUser.uid}_${parentId}`;
+            state.currentConferenceId = conferenceId;
 
-            // Check if room name already exists
-            const roomSnapshot = await getDoc(roomRef);
-            if (roomSnapshot.exists()) {
-                showMessage("A room with that name already exists. Please choose a different name.", true);
-                return;
-            }
-
-            try {
-                const startMuted = joinMutedCheckbox.checked;
-                const stream = await getLocalStream(startMuted);
-                if (!stream) return;
-                setupPeerConnection();
-                stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
-                const offer = await peerConnection.createOffer();
-                await peerConnection.setLocalDescription(offer);
-                const participants = {
-                    [userId]: {
-                        username,
-                        isMuted: startMuted,
-                        isVideoOff: startMuted
-                    }
-                };
-                await setDoc(roomRef, {
-                    offer: {
-                        sdp: offer.sdp,
-                        type: offer.type
-                    },
-                    createdBy: userId,
-                    createdByUsername: username,
-                    participants: participants,
-                    isLocked: false,
-                    lastUpdated: serverTimestamp()
-                });
-                listenForRoomUpdates();
-                listenForRoomChat(roomRef);
-                listenForParticipants();
-                showMessage(`Room "${roomName}" created! Share this ID with others.`);
-                updateRoomControls(true);
-                localVideoContainer.classList.add('active-border', 'pulse-border');
-                localVideoContainer.classList.remove('hidden');
-                localVideoLabel.textContent = username;
-                for (let i = 0; i < 50; i++) addSakuraPetal();
-            } catch (error) {
-                console.error("Error creating room:", error);
-                showMessage("Failed to create room. Please try again.", true);
-            }
-        };
-
-        const joinRoom = async () => {
-            if (!userId) {
-                showMessage("Authentication in progress. Please wait.", true);
-                return;
-            }
-            const roomId = roomIdInput.value.trim();
-            if (!roomId) {
-                showMessage("Please enter a Room ID.", true);
-                return;
-            }
-            roomRef = doc(db, `artifacts/${appId}/public/data/video-rooms`, roomId);
-            const roomSnapshot = await getDoc(roomRef);
-            if (!roomSnapshot.exists()) {
-                showMessage("Room does not exist.", true);
-                return;
-            }
-            const roomData = roomSnapshot.data();
-            if (roomData.isLocked) {
-                showMessage("This room is locked by the host.", true);
-                return;
-            }
-            showMessage(`Joining room: ${roomId}`);
-            try {
-                const startMuted = joinMutedCheckbox.checked;
-                const stream = await getLocalStream(startMuted);
-                if (!stream) return;
-                setupPeerConnection();
-                stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
-                const offer = roomSnapshot.data().offer;
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-                const answer = await peerConnection.createAnswer();
-                await peerConnection.setLocalDescription(answer);
-                await updateDoc(roomRef, {
-                    answer,
-                    [`participants.${userId}`]: {
-                        username,
-                        isMuted: startMuted,
-                        isVideoOff: startMuted
-                    }
-                });
-                listenForRoomUpdates();
-                listenForRoomChat(roomRef);
-                listenForParticipants();
-                remoteVideoLabel.textContent = roomData.createdByUsername;
-                showMessage(`Successfully joined room "${roomId}"!`);
-                updateRoomControls(true);
-                localVideoContainer.classList.add('active-border');
-                localVideoContainer.classList.remove('hidden');
-                localVideoLabel.textContent = username;
-                remoteVideoContainer.classList.remove('hidden');
-                for (let i = 0; i < 50; i++) addSakuraPetal();
-            } catch (error) {
-                console.error("Error joining room:", error);
-                showMessage("Failed to join room. Please try again.", true);
-            }
-        };
-
-        const hangup = async () => {
-            if (peerConnection) peerConnection.close();
-            if (localStream) localStream.getTracks().forEach(track => track.stop());
-            localVideo.srcObject = null;
-            remoteVideo.srcObject = null;
-            peerConnection = null;
-            localStream = null;
-            isScreenSharing = false;
-            screenShareBtn.textContent = 'Screen Share';
-            sakuraEffect.classList.add('hidden');
-            if (document.fullscreenElement) {
-                document.exitFullscreen();
-            }
-            localVideoContainer.classList.remove('pulse-border', 'active-border');
-            remoteVideoContainer.classList.remove('pulse-border', 'active-border');
-            localVideoContainer.classList.add('hidden');
-            remoteVideoContainer.classList.add('hidden');
-
-            if (userId) {
-                if (roomRef) {
-                    const roomSnapshot = await getDoc(roomRef);
-                    const participants = roomSnapshot.data()?.participants || {};
-                    if(participants[userId]){
-                        delete participants[userId];
-                        await updateDoc(roomRef, { participants });
-                    }
-
-                    if (Object.keys(participants).length === 0) {
-                        await deleteDoc(roomRef);
-                        showMessage('Room has been automatically closed.', false);
-                    } else {
-                        showMessage(`${username} has left the room.`, false);
-                    }
-                }
-
-                const activeUserRef = doc(db, `artifacts/${appId}/public/data/active-users`, userId);
-                await updateDoc(activeUserRef, {
-                    isOnline: false
-                }).catch(console.error);
-
-            }
-
-            cleanUpListeners();
-            resetUI();
-        };
-
-        const cleanUpListeners = () => {
-            if (roomSnapshotListener) roomSnapshotListener();
-            if (candidatesListener) candidatesListener();
-            if (roomChatListener) roomChatListener();
-            if (participantsListener) participantsListener();
-            if (activeUsersListener) activeUsersListener();
-            if (adminRoomsListener) adminRoomsListener();
-            if (adminUsersListener) adminUsersListener();
-            roomSnapshotListener = candidatesListener = roomChatListener = participantsListener = activeUsersListener = adminRoomsListener = adminUsersListener = null;
-        };
-
-        const resetUI = () => {
-            roomIdInput.value = '';
-            newRoomNameInput.value = '';
-            statusMessage.style.display = 'none';
-            updateRoomControls(false);
-            roomChatCard.classList.add('hidden');
-            roomChatContainer.innerHTML = '';
-            participantsList.innerHTML = 'No participants in this room.';
-            localVideoLabel.textContent = '';
-            remoteVideoLabel.textContent = '';
-            updateMediaButtonStates(true, true);
-        };
-
-        const updateRoomControls = (inRoom) => {
-            createRoomBtn.disabled = inRoom;
-            joinRoomBtn.disabled = inRoom;
-            hangupBtn.disabled = !inRoom;
-            toggleAudioBtn.disabled = !inRoom;
-            toggleVideoBtn.disabled = !inRoom;
-            fullScreenBtn.disabled = !inRoom;
-            lockRoomBtn.disabled = !inRoom;
-            videoQualitySelect.disabled = inRoom;
-            screenShareBtn.disabled = !inRoom;
-            startRecordingBtn.disabled = !inRoom;
-            stopRecordingBtn.disabled = !inRoom;
-            roomChatInput.disabled = !inRoom;
-            sendRoomChatBtn.disabled = !inRoom;
-            roomFileUploadBtn.disabled = !inRoom;
-            newRoomNameInput.disabled = inRoom;
-            roomIdInput.disabled = inRoom;
-            roomChatCard.classList.toggle('hidden', !inRoom);
-            publicChatCard.classList.toggle('hidden', inRoom);
-        };
-
-        const updateMediaButtonStates = (audioMuted, videoMuted) => {
-            toggleAudioBtn.textContent = audioMuted ? "Unmute Audio" : "Mute Audio";
-            toggleAudioBtn.classList.toggle('btn-toggle-active', !audioMuted);
-            toggleVideoBtn.textContent = videoMuted ? "Turn On Video" : "Mute Video";
-            toggleVideoBtn.classList.toggle('btn-toggle-active', !videoMuted);
-
-            // Update icons based on state
-            if (audioMuted) {
-                localAudioIcon.classList.remove('fa-microphone', 'text-green-500');
-                localAudioIcon.classList.add('fa-microphone-slash', 'text-red-500');
-            } else {
-                localAudioIcon.classList.remove('fa-microphone-slash', 'text-red-500');
-                localAudioIcon.classList.add('fa-microphone', 'text-green-500');
-            }
-            if (videoMuted) {
-                localVideoIcon.classList.remove('fa-video', 'text-green-500');
-                localVideoIcon.classList.add('fa-video-slash', 'text-red-500');
-            } else {
-                localVideoIcon.classList.remove('fa-video-slash', 'text-red-500');
-                localVideoIcon.classList.add('fa-video', 'text-green-500');
-            }
-        };
-
-        const listenForRoomUpdates = () => {
-            if (roomSnapshotListener) roomSnapshotListener();
-            if (candidatesListener) candidatesListener();
-            roomSnapshotListener = onSnapshot(roomRef, async (snapshot) => {
-                const data = snapshot.data();
-                if (!snapshot.exists()) {
-                    hangup();
-                    showMessage("Room closed by host.", false);
-                    return;
-                }
-                
-                // Host logic: listen for answer and set remote description
-                if (data && data.answer && peerConnection.signalingState === 'have-local-offer') {
-                    console.log("Host received answer, setting remote description.");
-                    const answer = new RTCSessionDescription(data.answer);
-                    await peerConnection.setRemoteDescription(answer);
-                    remoteVideoContainer.classList.add('active-border');
-                    remoteVideoContainer.classList.add('pulse-border');
-                }
-
-                // Update local audio/video state if changed by admin
-                const myParticipantData = data.participants[userId];
-                if (myParticipantData) {
-                    // Mute/unmute local stream if the admin changes the state
-                    if (localStream.getAudioTracks()[0].enabled !== !myParticipantData.isMuted) {
-                        localStream.getAudioTracks()[0].enabled = !myParticipantData.isMuted;
-                        updateMediaButtonStates(myParticipantData.isMuted, myParticipantData.isVideoOff);
-                        showMessage(myParticipantData.isMuted ? "You have been muted by the admin." : "You have been unmuted by the admin.");
-                    }
-                    if (localStream.getVideoTracks()[0].enabled !== !myParticipantData.isVideoOff) {
-                         localStream.getVideoTracks()[0].enabled = !myParticipantData.isVideoOff;
-                         updateMediaButtonStates(myParticipantData.isMuted, myParticipantData.isVideoOff);
-                         showMessage(myParticipantData.isVideoOff ? "Your video has been turned off by the admin." : "Your video has been turned on by the admin.");
-                    }
-                }
-
-                // Update remote video label if a new user joins
-                if (data && data.participants) {
-                    const remoteParticipantId = Object.keys(data.participants).find(id => id !== userId);
-                    if (remoteParticipantId) {
-                        remoteVideoLabel.textContent = data.participants[remoteParticipantId].username;
-                        remoteVideoContainer.classList.remove('hidden');
-
-                        const remoteParticipantData = data.participants[remoteParticipantId];
-                        if (remoteParticipantData.isMuted) {
-                            remoteAudioIcon.classList.remove('fa-microphone', 'text-green-500');
-                            remoteAudioIcon.classList.add('fa-microphone-slash', 'text-red-500');
-                        } else {
-                            remoteAudioIcon.classList.remove('fa-microphone-slash', 'text-red-500');
-                            remoteAudioIcon.classList.add('fa-microphone', 'text-green-500');
-                        }
-                        if (remoteParticipantData.isVideoOff) {
-                            remoteVideoIcon.classList.remove('fa-video', 'text-green-500');
-                            remoteVideoIcon.classList.add('fa-video-slash', 'text-red-500');
-                        } else {
-                            remoteVideoIcon.classList.remove('fa-video-slash', 'text-red-500');
-                            remoteVideoIcon.classList.add('fa-video', 'text-green-500');
-                        }
-                    } else {
-                        // Hide remote video if no other participant exists
-                        remoteVideoContainer.classList.add('hidden');
-                        remoteVideoContainer.classList.remove('pulse-border', 'active-border');
-                    }
-                }
+            const conferenceRef = doc(db, `artifacts/${appId}/public/data/conferences`, conferenceId);
+            await setDoc(conferenceRef, {
+                teacherId: state.currentUser.uid,
+                parentId: parentId,
+                createdAt: serverTimestamp(),
+                status: 'active'
             });
 
-            candidatesListener = onSnapshot(collection(roomRef, 'candidates'), (snapshot) => {
-                snapshot.docChanges().forEach(async (change) => {
-                    if (change.type === "added" && change.doc.data().sender !== userId) {
-                        try {
-                            const candidate = new RTCIceCandidate(JSON.parse(change.doc.data().candidate));
-                            await peerConnection.addIceCandidate(candidate);
-                            console.log("Added remote ICE candidate.");
-                        } catch (error) {
-                            console.error("Error adding ICE candidate:", error);
-                        }
-                    }
-                });
-            });
-        };
+            await updateDoc(doc(db, `artifacts/${appId}/public/data/users`, state.currentUser.uid), { status: 'in-conference', conferenceId: conferenceId });
+            await updateDoc(doc(db, `artifacts/${appId}/public/data/users`, parentId), { status: 'in-conference', conferenceId: conferenceId });
+        }
 
-        const startScreenShare = async () => {
-            if (!peerConnection) {
-                showMessage("Please join a room before sharing your screen.", true);
-                return;
+        async function handleLeaveConference() {
+            if (!state.currentUser || !state.currentConferenceId) return;
+            
+            const conferenceRef = doc(db, `artifacts/${appId}/public/data/conferences`, state.currentConferenceId);
+            const conferenceDoc = await getDoc(conferenceRef);
+
+            if (conferenceDoc.exists()) {
+                const data = conferenceDoc.data();
+                // Both teacher and parent return to lobby
+                await updateDoc(doc(db, `artifacts/${appId}/public/data/users`, data.teacherId), { status: 'lobby', conferenceId: null });
+                await updateDoc(doc(db, `artifacts/${appId}/public/data/users`, data.parentId), { status: 'lobby', conferenceId: null });
             }
-            if (isScreenSharing) {
-                isScreenSharing = false;
-                screenShareBtn.textContent = 'Screen Share';
-                const stream = await getLocalStream(false);
-                if (!stream) return;
-                const videoSender = peerConnection.getSenders().find(sender => sender.track.kind === 'video');
-                if (videoSender) videoSender.replaceTrack(stream.getVideoTracks()[0]);
-            } else {
-                try {
-                    const displayStream = await navigator.mediaDevices.getDisplayMedia({
-                        video: true,
-                        audio: true
-                    });
-                    if (!displayStream) return;
-                    isScreenSharing = true;
-                    screenShareBtn.textContent = 'Stop Sharing';
-                    if (localStream) localStream.getTracks().forEach(track => track.stop());
-                    localStream = displayStream;
-                    const videoSender = peerConnection.getSenders().find(sender => sender.track.kind === 'video');
-                    const audioSender = peerConnection.getSenders().find(sender => sender.track.kind === 'audio');
-                    if (videoSender) videoSender.replaceTrack(localStream.getVideoTracks()[0]);
-                    if (audioSender && localStream.getAudioTracks().length > 0) {
-                        audioSender.replaceTrack(localStream.getAudioTracks()[0]);
-                    } else if (audioSender) {
-                        audioSender.replaceTrack(null);
-                    }
-                    localVideo.srcObject = localStream;
-                } catch (error) {
-                    console.error('Error starting screen share:', error);
-                    showMessage('Failed to start screen sharing. Permission denied or operation cancelled.', true);
-                    isScreenSharing = false;
-                    screenShareBtn.textContent = 'Screen Share';
-                }
-            }
-        };
+             // Optionally delete conference history, or mark as ended
+             await updateDoc(conferenceRef, { status: 'ended' });
 
-        const toggleAudio = async () => {
-            if (!localStream || !roomRef) return;
-            const audioTrack = localStream.getAudioTracks()[0];
-            audioTrack.enabled = !audioTrack.enabled;
-            updateMediaButtonStates(!audioTrack.enabled, !localStream.getVideoTracks()[0].enabled);
-            await updateDoc(doc(roomRef, 'participants', userId), { isMuted: !audioTrack.enabled });
-        };
-
-        const toggleVideo = async () => {
-            if (!localStream || !roomRef) return;
-            const videoTrack = localStream.getVideoTracks()[0];
-            videoTrack.enabled = !videoTrack.enabled;
-            updateMediaButtonStates(!localStream.getAudioTracks()[0].enabled, !videoTrack.enabled);
-            await updateDoc(doc(roomRef, 'participants', userId), { isVideoOff: !videoTrack.enabled });
-        };
-
-        const toggleRoomLock = async () => {
-            if (!roomRef) return;
-            const roomSnapshot = await getDoc(roomRef);
-            const isLocked = roomSnapshot.data()?.isLocked || false;
-            await updateDoc(roomRef, { isLocked: !isLocked });
-            lockRoomBtn.textContent = isLocked ? "Lock Room" : "Unlock Room";
-            showMessage(isLocked ? "Room is now unlocked." : "Room is now locked.", false);
-        };
-
-        const startRecording = () => {
-            if (!remoteVideo.srcObject) {
-                showMessage("No remote stream to record.", true);
-                return;
-            }
-            recordedChunks = [];
-            const stream = remoteVideo.srcObject;
-            mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm; codecs=vp9' });
-            mediaRecorder.ondataavailable = (e) => {
-                if (e.data.size > 0) recordedChunks.push(e.data);
-            };
-            mediaRecorder.onstop = () => {
-                const blob = new Blob(recordedChunks, { type: 'video/webm' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `conference-recording-${Date.now()}.webm`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                showMessage("Recording downloaded successfully!");
-            };
-            mediaRecorder.start();
-            showMessage("Recording started...");
-            startRecordingBtn.disabled = true;
-            stopRecordingBtn.disabled = false;
-        };
-
-        const stopRecording = () => {
-            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                mediaRecorder.stop();
-                showMessage("Recording stopped. Your download should start shortly.");
-                startRecordingBtn.disabled = false;
-                stopRecordingBtn.disabled = true;
-            }
-        };
-
-        // === 6. CHAT & MESSAGE FUNCTIONS ===
-
-        const displayMessage = (messageData, container) => {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${messageData.senderId === userId ? 'my-message' : 'other-message'}`;
-            const senderName = messageData.senderId === userId ? 'You' : messageData.senderUsername;
-            let contentHtml = '';
-
-            if (messageData.type === 'text') {
-                contentHtml = `<span class="font-bold">${senderName}:</span> ${messageData.text}`;
-            } else if (messageData.type === 'file' && messageData.file) {
-                const file = messageData.file;
-                if (file.type.startsWith('image/')) {
-                    contentHtml = `<div class="flex flex-col"><span class="font-bold">${senderName} shared an image:</span><img src="${file.url}" alt="${file.name}" class="mt-2 rounded-lg" style="max-width: 100%; max-height: 200px;"></div>`;
-                } else {
-                    contentHtml = `<div class="flex flex-col"><span class="font-bold">${senderName} shared a file:</span><a href="${file.url}" download="${file.name}" class="text-blue-400 hover:underline"><i class="fas fa-file-download mr-1"></i>${file.name}</a></div>`;
-                }
-            }
-            messageDiv.innerHTML = contentHtml;
-            container.appendChild(messageDiv);
-            container.scrollTop = container.scrollHeight;
-        };
+            state.currentConferenceId = null;
+            showLobbyView(); // Go back to lobby for both
+        }
         
-        const uploadFile = async (file, collectionRef) => {
-            if (file.size > oneMB) {
-                showMessage('File is too large. Max size is 1MB.', true);
-                return;
+        async function handleLobbyChat(e) {
+            e.preventDefault();
+            const input = document.getElementById('lobby-chat-input');
+            const message = input.value.trim();
+            if (message && state.currentUser) {
+                const userDoc = await getDoc(doc(db, `artifacts/${appId}/public/data/users`, state.currentUser.uid));
+                await addDoc(collection(db, `artifacts/${appId}/public/data/lobby-chat`), {
+                    text: message,
+                    uid: state.currentUser.uid,
+                    name: userDoc.data()?.name || 'Anonymous',
+                    createdAt: serverTimestamp()
+                });
+                input.value = '';
             }
-            showMessage("File upload in progress...");
-            const storageRef = ref(storage, `uploads/${Date.now()}_${file.name}`);
-            const uploadTask = uploadBytesResumable(storageRef, file);
+        }
 
-            uploadTask.on('state_changed',
-                (snapshot) => {
-                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    showMessage(`Upload is ${progress.toFixed(0)}% done`);
-                },
-                (error) => {
-                    console.error("File upload failed:", error);
-                    showMessage("File upload failed.", true);
-                },
-                async () => {
-                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                    await addDoc(collectionRef, {
-                        senderId: userId,
-                        senderUsername: username,
-                        file: {
-                            name: file.name,
-                            type: file.type,
-                            url: downloadURL
-                        },
-                        timestamp: serverTimestamp(),
-                        type: 'file'
-                    });
-                    showMessage("File uploaded successfully.");
-                }
-            );
-        };
-
-        const sendPublicMessage = async () => {
-            const message = publicChatInput.value.trim();
-            if (!message) return;
-            const publicChatRef = collection(db, `artifacts/${appId}/public/data/public-chat`);
-            await addDoc(publicChatRef, {
-                senderId: userId,
-                senderUsername: username,
-                text: message,
-                timestamp: serverTimestamp(),
-                type: 'text'
-            });
-            // Update last active time
-            await updateDoc(doc(db, `artifacts/${appId}/public/data/active-users`, userId), { lastActive: serverTimestamp() });
-            publicChatInput.value = '';
-        };
-
-        const sendRoomMessage = async () => {
-            if (!roomRef) return;
-            const message = roomChatInput.value.trim();
-            if (!message) return;
-            const chatMessagesRef = collection(roomRef, 'chat-messages');
-            await addDoc(chatMessagesRef, {
-                senderId: userId,
-                senderUsername: username,
-                text: message,
-                timestamp: serverTimestamp(),
-                type: 'text'
-            });
-            // Update last active time
-            await updateDoc(doc(db, `artifacts/${appId}/public/data/active-users`, userId), { lastActive: serverTimestamp() });
-            roomChatInput.value = '';
-        };
-
-        const handleFileUpload = (file, sendFunction) => {
-            if (file.size > oneMB) {
-                showMessage('File is too large. Max size is 1MB.', true);
-                return;
+        async function handleConferenceChat(e) {
+            e.preventDefault();
+            const input = document.getElementById('conference-chat-input');
+            const message = input.value.trim();
+            if (message && state.currentUser && state.currentConferenceId) {
+                 const userDoc = await getDoc(doc(db, `artifacts/${appId}/public/data/users`, state.currentUser.uid));
+                 await addDoc(collection(db, `artifacts/${appId}/public/data/conferences`, state.currentConferenceId, 'messages'), {
+                    text: message,
+                    uid: state.currentUser.uid,
+                    name: userDoc.data()?.name || 'Anonymous',
+                    createdAt: serverTimestamp()
+                });
+                input.value = '';
             }
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const fileData = {
-                    name: file.name,
-                    type: file.type,
-                    size: file.size,
-                    data: event.target.result,
-                };
-                sendFunction(fileData);
-            };
-            reader.readAsDataURL(file);
-        };
+        }
 
-        // === 7. USER & ROOM LISTENING FUNCTIONS ===
+        // --- UI Updates & View Management ---
 
-        const listenForRooms = () => {
-            if (roomsListener) roomsListener();
-            const roomsCollectionRef = collection(db, `artifacts/${appId}/public/data/video-rooms`);
-            roomsListener = onSnapshot(roomsCollectionRef, (snapshot) => {
-                activeRoomsList.innerHTML = '';
-                if (snapshot.empty) {
-                    activeRoomsList.innerHTML = '<p class="text-gray-500 text-sm">No active rooms.</p>';
-                } else {
-                    snapshot.forEach(doc => {
-                        const roomData = doc.data();
-                        const roomName = doc.id;
-                        const numParticipants = Object.keys(roomData.participants || {}).length;
-                        const statusIcon = roomData.isLocked ? '<i class="fas fa-lock text-red-500"></i>' : '<i class="fas fa-check-circle text-green-500"></i>';
-                        const roomDiv = document.createElement('div');
-                        roomDiv.className = 'flex items-center justify-between p-2 bg-[#3c3836] rounded-sm hover:bg-[#504945] transition duration-150 cursor-pointer';
-                        roomDiv.innerHTML = `
-                            <div class="flex items-center space-x-2">
-                                <span>${statusIcon}</span>
-                                <div class="flex flex-col">
-                                    <span class="font-semibold">${roomName}</span>
-                                    <span class="text-xs text-gray-400">Created by: ${roomData.createdByUsername}</span>
-                                    <span class="text-xs text-gray-400">${numParticipants} participant${numParticipants !== 1 ? 's' : ''}</span>
-                                </div>
-                            </div>
-                            <button data-room-id="${roomName}" class="join-room-btn px-3 py-1 text-sm rounded-sm bg-blue-600 text-white hover:bg-blue-700">Join</button>
-                        `;
-                        activeRoomsList.appendChild(roomDiv);
-                    });
-                    document.querySelectorAll('.join-room-btn').forEach(button => {
-                        button.addEventListener('click', (e) => {
-                            roomIdInput.value = e.target.dataset.roomId;
-                            joinRoom();
-                        });
-                    });
-                }
-            });
-        };
+        function cleanupSubscriptions() {
+            state.unsubscribers.forEach(unsub => unsub());
+            state.unsubscribers = [];
+        }
 
-        const listenForPublicChat = () => {
-            if (publicChatListener) publicChatListener();
-            const publicChatRef = collection(db, `artifacts/${appId}/public/data/public-chat`);
-            publicChatListener = onSnapshot(publicChatRef, (snapshot) => {
-                snapshot.docChanges().forEach(change => {
-                    if (change.type === 'added') {
-                        const messageData = change.doc.data();
-                        displayMessage(messageData, publicChatContainer);
-                    }
-                    if (change.type === 'removed') {
-                        // This handles the "Clear Waiting Room Chat" feature
-                        const allMessages = document.querySelectorAll('#publicChatContainer .message');
-                        if (allMessages.length > 0) {
-                             publicChatContainer.innerHTML = '';
-                        }
+        function showLobbyView() {
+            cleanupSubscriptions();
+
+            loginView.classList.add('hidden');
+            conferenceView.classList.add('hidden');
+            lobbyView.classList.remove('hidden');
+
+            const usersUnsub = onSnapshot(collection(db, `artifacts/${appId}/public/data/users`), (snapshot) => {
+                const users = [];
+                let userInConference = false;
+                snapshot.forEach(docSnap => {
+                    const user = docSnap.data();
+                    users.push(user);
+                    // Check if current user is being pulled into a conference
+                    if (user.uid === state.currentUser.uid && user.status === 'in-conference') {
+                        userInConference = true;
+                        showConferenceView(user.conferenceId);
                     }
                 });
-            });
-        };
-
-        const listenForRoomChat = (roomDocRef) => {
-            if (roomChatListener) roomChatListener();
-            const chatMessagesRef = collection(roomDocRef, 'chat-messages');
-            roomChatListener = onSnapshot(chatMessagesRef, (snapshot) => {
-                snapshot.docChanges().forEach(change => {
-                    if (change.type === 'added') {
-                        const messageData = change.doc.data();
-                        displayMessage(messageData, roomChatContainer);
-                    }
-                    if (change.type === 'removed') {
-                        // This handles the "Clear Room Chat" feature
-                        const allMessages = document.querySelectorAll('#roomChatContainer .message');
-                         if (allMessages.length > 0) {
-                             roomChatContainer.innerHTML = '';
-                         }
-                    }
-                });
-            });
-        };
-
-        const listenForParticipants = () => {
-            if (participantsListener) participantsListener();
-            participantsList.innerHTML = '';
-            participantsListener = onSnapshot(roomRef, (snapshot) => {
-                const roomData = snapshot.data();
-                const participants = roomData?.participants || {};
-                const participantIds = Object.keys(participants);
-                participantsList.innerHTML = participantIds.length === 0 ? 'No participants in this room.' : '';
-
-                participantIds.forEach(id => {
-                    const participantData = participants[id];
-                    const participantName = participantData.username === username ? `${participantData.username} (You)` : participantData.username;
-                    const audioIcon = participantData.isMuted ? '<i class="fas fa-microphone-slash text-red-500"></i>' : '<i class="fas fa-microphone text-green-500"></i>';
-                    const videoIcon = participantData.isVideoOff ? '<i class="fas fa-video-slash text-red-500"></i>' : '<i class="fas fa-video text-green-500"></i>';
-                    const participantDiv = document.createElement('div');
-                    participantDiv.className = 'flex items-center space-x-2 p-2 bg-[#3c3836] rounded-sm';
-                    participantDiv.innerHTML = `
-                        <i class="fas fa-user-circle text-lg"></i>
-                        <span class="text-sm flex-1">${participantName}</span>
-                        <span class="text-xs text-gray-400 space-x-2">${audioIcon} ${videoIcon}</span>
-                    `;
-                    participantsList.appendChild(participantDiv);
-                });
-            });
-        };
-
-        // FIX: The user-facing active users list was broken. I've fixed it to correctly display users.
-        const listenForActiveUsers = () => {
-            if (activeUsersListener) activeUsersListener();
-            const activeUsersRef = collection(db, `artifacts/${appId}/public/data/active-users`);
-            activeUsersListener = onSnapshot(activeUsersRef, (snapshot) => {
-                activeUsersList.innerHTML = '';
-                const users = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })).filter(user => user.isOnline);
-                if (users.length > 0) {
-                    users.forEach(user => {
-                        const userDiv = document.createElement('div');
-                        userDiv.className = 'flex items-center space-x-2 p-2 bg-[#3c3836] rounded-sm';
-                        userDiv.innerHTML = `
-                            <i class="fas fa-user-circle text-lg"></i>
-                            <span class="text-sm flex-1">${user.username}</span>
-                        `;
-                        activeUsersList.appendChild(userDiv);
-                    });
-                } else {
-                    activeUsersList.innerHTML = '<p class="text-gray-500 text-sm">No active users.</p>';
+                if (!userInConference) {
+                    renderParentsList(users);
                 }
             });
-        };
 
-        // === 8. ADMIN DASHBOARD FUNCTIONS ===
+            const chatUnsub = onSnapshot(query(collection(db, `artifacts/${appId}/public/data/lobby-chat`), orderBy('createdAt')), (snapshot) => {
+                renderLobbyChat(snapshot.docs);
+            });
+            
+            state.unsubscribers.push(usersUnsub, chatUnsub);
+        }
 
-        const clearPublicChat = async () => {
-            const chatMessagesRef = collection(db, `artifacts/${appId}/public/data/public-chat`);
-            const snapshot = await getDocs(chatMessagesRef);
-            if(snapshot.empty) {
-                showMessage("Public chat is already empty.", false);
-                return;
-            }
-            const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
-            await Promise.all(deletePromises);
-            showMessage('Waiting room chat cleared successfully.', false);
-        };
+        function showConferenceView(conferenceId) {
+            cleanupSubscriptions();
+            state.currentConferenceId = conferenceId;
 
-        const refreshAdminData = () => {
-            checkServerStatus();
-            listenForAdminRooms();
-            listenForAdminUsers();
-            populateAnnouncementRooms();
-            showMessage("Admin data refreshed.", false);
-        };
+            loginView.classList.add('hidden');
+            lobbyView.classList.add('hidden');
+            conferenceView.classList.remove('hidden');
+            
+            const messagesUnsub = onSnapshot(query(collection(db, `artifacts/${appId}/public/data/conferences`, conferenceId, 'messages'), orderBy('createdAt')), (snapshot) => {
+                renderConferenceChat(snapshot.docs);
+            });
 
-        const checkServerStatus = async () => {
-            try {
-                const testDoc = doc(db, `artifacts/${appId}/public/data/test`);
-                await getDoc(testDoc);
-                serverStatus.textContent = 'Online';
-                serverStatus.className = 'text-green-500';
-            } catch (error) {
-                serverStatus.textContent = 'Offline';
-                serverStatus.className = 'text-red-500';
-                showMessage('Server connection failed.', true);
-            }
-        };
-
-        const listenForAdminRooms = () => {
-            if (adminRoomsListener) adminRoomsListener();
-            const roomsCollectionRef = collection(db, `artifacts/${appId}/public/data/video-rooms`);
-            adminRoomsListener = onSnapshot(roomsCollectionRef, (snapshot) => {
-                adminActiveRoomsList.innerHTML = '';
-                totalRooms.textContent = snapshot.size;
-                if (snapshot.empty) {
-                    adminActiveRoomsList.innerHTML = '<p class="text-gray-500 text-sm">No active rooms.</p>';
-                } else {
-                    snapshot.forEach(doc => {
-                        const roomData = doc.data();
-                        const roomName = doc.id;
-                        const numParticipants = Object.keys(roomData.participants || {}).length;
-                        const isLocked = roomData.isLocked ? '<i class="fas fa-lock text-red-500"></i>' : '<i class="fas fa-unlock text-green-500"></i>';
-                        const roomDiv = document.createElement('div');
-                        roomDiv.className = 'flex items-center justify-between p-2 bg-[#3c3836] rounded-sm hover:bg-[#504945] transition duration-150';
-                        roomDiv.innerHTML = `
-                            <div class="flex items-center space-x-2">
-                                <span>${isLocked}</span>
-                                <div class="flex flex-col">
-                                    <span class="font-semibold">${roomName}</span>
-                                    <span class="text-xs text-gray-400">Participants: ${numParticipants}</span>
-                                    <span class="text-xs text-gray-400">Created by: ${roomData.createdByUsername}</span>
-                                </div>
-                            </div>
-                            <div class="flex space-x-2">
-                                <button data-room-id="${roomName}" class="view-room-btn px-3 py-1 text-sm rounded-sm bg-blue-600 text-white hover:bg-blue-700">View</button>
-                                <button data-room-id="${roomName}" class="delete-room-btn px-3 py-1 text-sm rounded-sm bg-red-600 text-white hover:bg-red-700">Delete</button>
-                            </div>
-                        `;
-                        adminActiveRoomsList.appendChild(roomDiv);
-                    });
+            // Listen for conference end signal
+            const conferenceUnsub = onSnapshot(doc(db, `artifacts/${appId}/public/data/users`, state.currentUser.uid), (docSnap) => {
+                if(docSnap.data()?.status === 'lobby') {
+                    state.currentConferenceId = null;
+                    showLobbyView();
                 }
             });
-        };
 
-        // FIX: The admin active users list was broken. I've fixed it to correctly display IP addresses.
-        const listenForAdminUsers = () => {
-            if (adminUsersListener) adminUsersListener();
-            const activeUsersRef = collection(db, `artifacts/${appId}/public/data/active-users`);
-            adminUsersListener = onSnapshot(activeUsersRef, (snapshot) => {
-                adminActiveUsersList.innerHTML = '';
-                totalUsers.textContent = snapshot.size;
-                const users = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })); // Removed the filter to show all users
-                if (users.length > 0) {
-                    users.forEach(user => {
-                        const onlineStatus = user.isOnline ? '<span class="text-green-500">&#9679;</span> Online' : '<span class="text-red-500">&#9679;</span> Offline';
-                        const userDiv = document.createElement('div');
-                        userDiv.className = 'flex items-center justify-between p-2 bg-[#3c3836] rounded-sm';
-                        userDiv.innerHTML = `
-                            <div class="flex items-center space-x-2">
-                                <i class="fas fa-user-circle text-lg"></i>
-                                <div class="flex flex-col">
-                                    <span class="text-sm flex-1">${user.username}</span>
-                                    <span class="text-xs text-gray-400">IP: ${user.ipAddress || 'Unknown'}</span>
-                                    <span class="text-xs">${onlineStatus} | Last Active: ${user.lastActive ? new Date(user.lastActive.seconds * 1000).toLocaleString() : 'N/A'} | Agent: ${user.userAgent || 'Unknown'}</span>
-                                </div>
-                            </div>
-                            <button data-user-id="${user.id}" data-user-name="${user.username}" class="kick-user-btn btn-danger text-xs px-2 py-1">Kick</button>
-                        `;
-                        adminActiveUsersList.appendChild(userDiv);
-                    });
-                } else {
-                    adminActiveUsersList.innerHTML = '<p class="text-gray-500 text-sm">No active users.</p>';
-                }
-            });
-        };
+            state.unsubscribers.push(messagesUnsub, conferenceUnsub);
+        }
         
-        const kickUserFromWaitingRoom = async (userIdToKick, usernameToKick) => {
-            try {
-                const userDocRef = doc(db, `artifacts/${appId}/public/data/active-users`, userIdToKick);
-                await deleteDoc(userDocRef);
-                showMessage(`User "${usernameToKick}" has been kicked from the waiting room.`, false);
-            } catch (error) {
-                console.error('Error kicking user:', error);
-                showMessage('Failed to kick user.', true);
-            }
-        };
+        function resetUI() {
+            cleanupSubscriptions();
+            conferenceView.classList.add('hidden');
+            lobbyView.classList.add('hidden');
+            loginView.classList.remove('hidden');
+            document.getElementById('name').value = '';
+            state.currentUser = null;
+            state.isTeacher = false;
+            state.currentConferenceId = null;
+        }
 
-        const showRoomDetails = async (roomId) => {
-            roomDetailsContainer.innerHTML = '';
-            const roomRef = doc(db, `artifacts/${appId}/public/data/video-rooms`, roomId);
-            const roomSnapshot = await getDoc(roomRef);
-            if (!roomSnapshot.exists()) {
-                roomDetailsContainer.innerHTML = `<p class="text-gray-500 text-sm">Room ${roomId} does not exist anymore.</p>`;
-                return;
+
+        function renderParentsList(users) {
+            const list = document.getElementById('parents-list');
+            list.innerHTML = '';
+            users.filter(u => !u.isTeacher && u.status === 'lobby').forEach(user => {
+                const li = document.createElement('li');
+                li.className = 'flex items-center justify-between p-3 bg-[#504945] rounded-lg';
+                li.innerHTML = `
+                    <span class="font-medium">${user.name}</span>
+                    ${state.isTeacher ? `<button data-uid="${user.uid}" class="start-conf-btn bg-[#98971a] hover:bg-[#b8bb26] text-[#282828] text-sm font-bold py-1 px-3 rounded-md shadow transition-transform duration-150 hover:scale-105">Start Meeting</button>` : ''}
+                `;
+                list.appendChild(li);
+            });
+
+            if (state.isTeacher) {
+                document.querySelectorAll('.start-conf-btn').forEach(button => {
+                    button.addEventListener('click', (e) => handleStartConference(e.target.dataset.uid));
+                });
             }
-            const roomData = roomSnapshot.data();
-            const participants = roomData.participants || {};
-            const participantsListHtml = Object.keys(participants).map(pId => {
-                const pData = participants[pId];
-                const isMuted = pData.isMuted ? 'text-red-500 fas fa-microphone-slash' : 'text-green-500 fas fa-microphone';
-                const isVideoOff = pData.isVideoOff ? 'text-red-500 fas fa-video-slash' : 'text-green-500 fas fa-video';
-                return `
-                    <div class="flex items-center justify-between p-2 bg-[#504945] rounded-sm">
-                        <span class="text-sm">${pData.username}</span>
-                        <div class="flex space-x-2">
-                            <button data-participant-id="${pId}" data-action="toggle-audio" data-room-id="${roomId}" class="btn-toggle text-xs px-2 py-1"><i class="${isMuted}"></i></button>
-                            <button data-participant-id="${pId}" data-action="toggle-video" data-room-id="${roomId}" class="btn-toggle text-xs px-2 py-1"><i class="${isVideoOff}"></i></button>
-                            <button data-participant-id="${pId}" data-room-id="${roomId}" data-action="kick" class="btn-danger text-xs px-2 py-1">Kick</button>
+        }
+
+        function renderLobbyChat(docs) {
+            const messagesDiv = document.getElementById('lobby-chat-messages');
+            messagesDiv.innerHTML = '';
+            docs.forEach(doc => {
+                const data = doc.data();
+                const isMe = data.uid === state.currentUser?.uid;
+                messagesDiv.innerHTML += `
+                    <div class="flex ${isMe ? 'justify-end' : 'justify-start'}">
+                        <div class="chat-bubble rounded-lg p-3 ${isMe ? 'chat-bubble-me text-white' : 'chat-bubble-other text-white'}">
+                            ${!isMe ? `<p class="text-xs font-bold text-blue-300 mb-1">${data.name}</p>` : ''}
+                            <p class="text-sm">${data.text}</p>
                         </div>
                     </div>
                 `;
-            }).join('');
-
-            roomDetailsContainer.innerHTML = `
-                <h3 class="text-lg font-semibold mb-2">Details for Room: ${roomId}</h3>
-                <p class="text-sm">Created by: ${roomData.createdByUsername}</p>
-                <p class="text-sm">Status: ${roomData.isLocked ? 'Locked' : 'Open'}</p>
-                <div class="flex space-x-2 mt-4">
-                    <button data-room-id="${roomId}" data-action="toggle-lock" class="btn-toggle px-4 py-2 font-semibold rounded-sm">
-                        ${roomData.isLocked ? 'Unlock Room' : 'Lock Room'}
-                    </button>
-                    <button data-room-id="${roomId}" data-action="mute-all" class="btn-danger px-4 py-2 font-semibold rounded-sm">Mute All</button>
-                    <button data-room-id="${roomId}" data-action="video-off-all" class="btn-danger px-4 py-2 font-semibold rounded-sm">Video Off All</button>
-                    <button data-room-id="${roomId}" data-action="clear-room-chat" class="btn-danger px-4 py-2 font-semibold rounded-sm">Clear Room Chat</button>
-                </div>
-                <h4 class="text-md font-semibold mt-4 mb-2">Participants:</h4>
-                <div class="space-y-2">
-                    ${participantsListHtml || '<p class="text-gray-500 text-sm">No participants.</p>'}
-                </div>
-            `;
-        };
-        
-        const clearRoomChat = async (roomId) => {
-            const roomRef = doc(db, `artifacts/${appId}/public/data/video-rooms`, roomId);
-            const chatMessagesRef = collection(roomRef, 'chat-messages');
-            const snapshot = await getDocs(chatMessagesRef);
-            if(snapshot.empty) {
-                showMessage(`Chat for room "${roomId}" is already empty.`, false);
-                return;
-            }
-            const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
-            await Promise.all(deletePromises);
-            showMessage(`Chat for room "${roomId}" cleared successfully.`, false);
-        };
-
-        const kickUser = async (roomId, participantId) => {
-            try {
-                const roomRef = doc(db, `artifacts/${appId}/public/data/video-rooms`, roomId);
-                await runTransaction(db, async (transaction) => {
-                    const roomDoc = await transaction.get(roomRef);
-                    if (!roomDoc.exists()) {
-                        throw new Error("Room does not exist!");
-                    }
-                    const participants = roomDoc.data().participants || {};
-                    if (!participants[participantId]) {
-                        throw new Error("Participant not found!");
-                    }
-                    const newParticipants = { ...participants };
-                    delete newParticipants[participantId];
-                    transaction.update(roomRef, { participants: newParticipants });
-                });
-                showMessage(`User has been kicked from room ${roomId}.`, false);
-            } catch (error) {
-                console.error('Error kicking user:', error);
-                showMessage('Failed to kick user.', true);
-            }
-        };
-
-        const toggleParticipantAudio = async (roomId, participantId) => {
-            try {
-                const roomRef = doc(db, `artifacts/${appId}/public/data/video-rooms`, roomId);
-                await runTransaction(db, async (transaction) => {
-                    const roomDoc = await transaction.get(roomRef);
-                    if (!roomDoc.exists()) {
-                        throw new Error("Room does not exist!");
-                    }
-                    const currentMuteStatus = roomDoc.data()?.participants[participantId]?.isMuted || false;
-                    transaction.update(roomRef, { [`participants.${participantId}.isMuted`]: !currentMuteStatus });
-                });
-                showMessage(`Toggled audio for user in room ${roomId}.`, false);
-            } catch (error) {
-                console.error('Error toggling audio:', error);
-                showMessage('Failed to toggle audio.', true);
-            }
-        };
-        
-        const massMuteParticipants = async (roomId, muteStatus) => {
-            try {
-                const roomRef = doc(db, `artifacts/${appId}/public/data/video-rooms`, roomId);
-                await runTransaction(db, async (transaction) => {
-                    const roomDoc = await transaction.get(roomRef);
-                    if (!roomDoc.exists()) {
-                        throw new Error("Room does not exist!");
-                    }
-                    const participants = roomDoc.data()?.participants || {};
-                    const updates = {};
-                    for (const pId in participants) {
-                        updates[`participants.${pId}.isMuted`] = muteStatus;
-                    }
-                    transaction.update(roomRef, updates);
-                });
-                showMessage(muteStatus ? `All participants in room ${roomId} have been muted.` : `All participants in room ${roomId} have been unmuted.`);
-            } catch(error) {
-                console.error('Error with mass mute:', error);
-                showMessage('Failed to mass mute participants.', true);
-            }
-        };
-        
-        const massVideoOffParticipants = async (roomId, videoOffStatus) => {
-            try {
-                const roomRef = doc(db, `artifacts/${appId}/public/data/video-rooms`, roomId);
-                await runTransaction(db, async (transaction) => {
-                    const roomDoc = await transaction.get(roomRef);
-                    if (!roomDoc.exists()) {
-                        throw new Error("Room does not exist!");
-                    }
-                    const participants = roomDoc.data()?.participants || {};
-                    const updates = {};
-                    for (const pId in participants) {
-                        updates[`participants.${pId}.isVideoOff`] = videoOffStatus;
-                    }
-                    transaction.update(roomRef, updates);
-                });
-                showMessage(videoOffStatus ? `All participants' video in room ${roomId} have been turned off.` : `All participants' video in room ${roomId} have been turned on.`);
-            } catch(error) {
-                console.error('Error with mass video off:', error);
-                showMessage('Failed to turn off all videos.', true);
-            }
-        };
-
-        const toggleParticipantVideo = async (roomId, participantId) => {
-            try {
-                const roomRef = doc(db, `artifacts/${appId}/public/data/video-rooms`, roomId);
-                await runTransaction(db, async (transaction) => {
-                    const roomDoc = await transaction.get(roomRef);
-                    if (!roomDoc.exists()) {
-                        throw new Error("Room does not exist!");
-                    }
-                    const currentVideoStatus = roomDoc.data()?.participants[participantId]?.isVideoOff || false;
-                    transaction.update(roomRef, { [`participants.${participantId}.isVideoOff`]: !currentVideoStatus });
-                });
-                showMessage(`Toggled video for user in room ${roomId}.`, false);
-            } catch (error) {
-                console.error('Error toggling video:', error);
-                showMessage('Failed to toggle video.', true);
-            }
-        };
-
-        const toggleAdminRoomLock = async (roomId) => {
-            try {
-                const roomRef = doc(db, `artifacts/${appId}/public/data/video-rooms`, roomId);
-                const roomSnapshot = await getDoc(roomRef);
-                const isLocked = roomSnapshot.data()?.isLocked || false;
-                await updateDoc(roomRef, { isLocked: !isLocked });
-                showMessage(isLocked ? `Room ${roomId} is now unlocked.` : `Room ${roomId} is now locked.`, false);
-            } catch (error) {
-                console.error('Error toggling room lock:', error);
-                showMessage('Failed to toggle room lock.', true);
-            }
-        };
-
-        const deleteAllRooms = async () => {
-            try {
-                const roomsCollectionRef = collection(db, `artifacts/${appId}/public/data/video-rooms`);
-                const roomsSnapshot = await getDocs(roomsCollectionRef);
-                if (roomsSnapshot.empty) {
-                    showMessage('No rooms to delete.', false);
-                    return;
-                }
-                const deletePromises = roomsSnapshot.docs.map(async (roomDoc) => {
-                    await deleteDoc(roomDoc.ref);
-                });
-                await Promise.all(deletePromises);
-                showMessage('All rooms deleted successfully.', false);
-            } catch (error) {
-                console.error('Error deleting rooms:', error);
-                showMessage('Failed to delete rooms.', true);
-            }
-        };
-
-        const deleteRoom = async (roomId) => {
-            try {
-                const roomRef = doc(db, `artifacts/${appId}/public/data/video-rooms`, roomId);
-                await deleteDoc(roomRef);
-                showMessage(`Room ${roomId} deleted successfully.`, false);
-            } catch (error) {
-                console.error('Error deleting room:', error);
-                showMessage('Failed to delete room.', true);
-            }
-        };
-
-        const populateAnnouncementRooms = async () => {
-            announcementRoomId.innerHTML = '<option value="all">Send to All Rooms</option>';
-            const roomsCollectionRef = collection(db, `artifacts/${appId}/public/data/video-rooms`);
-            const snapshot = await getDocs(roomsCollectionRef);
-            snapshot.forEach(doc => {
-                const option = document.createElement('option');
-                option.value = doc.id;
-                option.textContent = doc.id;
-                announcementRoomId.appendChild(option);
             });
-        };
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
 
-        const sendAnnouncement = async () => {
-            const message = announcementInput.value.trim();
-            if (!message) {
-                showMessage('Announcement cannot be empty.', true);
-                return;
-            }
-            const targetRoom = announcementRoomId.value;
-            try {
-                const announcementData = {
-                    senderId: 'admin',
-                    senderUsername: 'Administrator',
-                    text: `📢 **ANNOUNCEMENT:** ${message}`,
-                    timestamp: serverTimestamp(),
-                    type: 'text'
-                };
-                if (targetRoom === 'all') {
-                    const roomsCollectionRef = collection(db, `artifacts/${appId}/public/data/video-rooms`);
-                    const snapshot = await getDocs(roomsCollectionRef);
-                    const promises = snapshot.docs.map(doc => addDoc(collection(doc.ref, 'chat-messages'), announcementData));
-                    await Promise.all(promises);
-                    showMessage('Global announcement sent successfully.', false);
-                } else {
-                    const roomRef = doc(db, `artifacts/${appId}/public/data/video-rooms`, targetRoom);
-                    const chatMessagesRef = collection(roomRef, 'chat-messages');
-                    await addDoc(chatMessagesRef, announcementData);
-                    showMessage(`Announcement sent to room ${targetRoom}.`, false);
-                }
-                announcementInput.value = '';
-            } catch (error) {
-                console.error('Error sending announcement:', error);
-                showMessage('Failed to send announcement.', true);
-            }
-        };
+        function renderConferenceChat(docs) {
+            const messagesDiv = document.getElementById('conference-chat-messages');
+            messagesDiv.innerHTML = '';
+            docs.forEach(doc => {
+                 const data = doc.data();
+                 const isMe = data.uid === state.currentUser?.uid;
+                 messagesDiv.innerHTML += `
+                    <div class="flex ${isMe ? 'justify-end' : 'justify-start'}">
+                        <div class="chat-bubble rounded-lg p-3 ${isMe ? 'chat-bubble-me text-white' : 'chat-bubble-other text-white'}">
+                             ${!isMe ? `<p class="text-xs font-bold text-blue-300 mb-1">${data.name}</p>` : ''}
+                            <p class="text-sm">${data.text}</p>
+                        </div>
+                    </div>
+                `;
+            });
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
 
-        // === 9. EVENT LISTENERS SETUP ===
-        document.addEventListener('DOMContentLoaded', () => {
-            initFirebase();
-
-            // Login Screen
-            submitLoginBtn.addEventListener('click', handleLogin);
-            usernameInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') handleLogin();
-            });
-
-            // Main App
-            createRoomBtn.addEventListener('click', createRoom);
-            joinRoomBtn.addEventListener('click', joinRoom);
-            hangupBtn.addEventListener('click', hangup);
-            toggleAudioBtn.addEventListener('click', toggleAudio);
-            toggleVideoBtn.addEventListener('click', toggleVideo);
-            screenShareBtn.addEventListener('click', startScreenShare);
-            fullScreenBtn.addEventListener('click', () => {
-                if (document.fullscreenElement) {
-                    document.exitFullscreen();
-                } else if (remoteVideo.srcObject) {
-                    remoteVideoContainer.requestFullscreen().catch(err => {
-                        console.error("Error attempting to enable full-screen mode:", err);
-                    });
-                } else if (localVideo.srcObject) {
-                    localVideoContainer.requestFullscreen().catch(err => {
-                        console.error("Error attempting to enable full-screen mode:", err);
-                    });
-                }
-            });
-            volumeControl.addEventListener('input', (e) => remoteVideo.volume = e.target.value / 100);
-            startRecordingBtn.addEventListener('click', startRecording);
-            stopRecordingBtn.addEventListener('click', stopRecording);
-            lockRoomBtn.addEventListener('click', toggleRoomLock);
-
-            // Chat Functionality
-            sendPublicChatBtn.addEventListener('click', sendPublicMessage);
-            publicChatInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') sendPublicMessage();
-            });
-            publicFileUploadBtn.addEventListener('click', () => publicFileInput.click());
-            publicFileInput.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (file) uploadFile(file, collection(db, `artifacts/${appId}/public/data/public-chat`));
-            });
-
-            sendRoomChatBtn.addEventListener('click', sendRoomMessage);
-            roomChatInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') sendRoomMessage();
-            });
-            roomFileUploadBtn.addEventListener('click', () => roomFileInput.click());
-            roomFileInput.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (file && roomRef) uploadFile(file, collection(roomRef, 'chat-messages'));
-            });
-
-            // Room and User List Clicks (using event delegation for dynamic buttons)
-            document.addEventListener('click', (e) => {
-                if (e.target.classList.contains('join-room-btn')) {
-                    roomIdInput.value = e.target.dataset.roomId;
-                    joinRoom();
-                }
-                if (e.target.classList.contains('view-room-btn')) {
-                    showRoomDetails(e.target.dataset.roomId);
-                }
-                if (e.target.classList.contains('delete-room-btn')) {
-                    passwordModalTitle.textContent = 'Confirm Room Deletion';
-                    passwordModalText.textContent = `Enter the admin password to delete room ${e.target.dataset.roomId}.`;
-                    confirmBtn.dataset.action = `delete-room:${e.target.dataset.roomId}`;
-                    passwordModal.classList.remove('hidden');
-                }
-                if (e.target.classList.contains('kick-user-btn')) {
-                    const userIdToKick = e.target.dataset.userId;
-                    const userNameToKick = e.target.dataset.userName;
-                    kickUserFromWaitingRoom(userIdToKick, userNameToKick);
-                }
-                if (e.target.dataset.action === 'kick') {
-                    const participantId = e.target.dataset.participantId;
-                    const roomId = e.target.dataset.roomId;
-                    kickUser(roomId, participantId);
-                }
-                if (e.target.dataset.action === 'toggle-audio') {
-                    const participantId = e.target.dataset.participantId;
-                    const roomId = e.target.dataset.roomId;
-                    toggleParticipantAudio(roomId, participantId);
-                }
-                if (e.target.dataset.action === 'toggle-video') {
-                    const participantId = e.target.dataset.participantId;
-                    const roomId = e.target.dataset.roomId;
-                    toggleParticipantVideo(roomId, participantId);
-                }
-                if (e.target.dataset.action === 'toggle-lock') {
-                    const roomId = e.target.dataset.roomId;
-                    toggleAdminRoomLock(roomId);
-                }
-                if (e.target.dataset.action === 'mute-all') {
-                    const roomId = e.target.dataset.roomId;
-                    massMuteParticipants(roomId, true);
-                }
-                if (e.target.dataset.action === 'video-off-all') {
-                    const roomId = e.target.dataset.roomId;
-                    massVideoOffParticipants(roomId, true);
-                }
-                if (e.target.dataset.action === 'clear-public-chat') {
-                    clearPublicChat();
-                }
-                 if (e.target.dataset.action === 'clear-room-chat') {
-                    const roomId = e.target.dataset.roomId;
-                    passwordModalTitle.textContent = 'Clear Room Chat';
-                    passwordModalText.textContent = `Enter the admin password to clear the chat for room ${roomId}.`;
-                    confirmBtn.dataset.action = `clear-room-chat:${roomId}`;
-                    passwordModal.classList.remove('hidden');
-                }
-            });
-
-            // Modals
-            deleteAllRoomsBtn.addEventListener('click', () => {
-                passwordModalTitle.textContent = 'Delete All Rooms';
-                passwordModalText.textContent = 'To delete all rooms, please enter the administrator password.';
-                confirmBtn.dataset.action = 'delete-all';
-                passwordModal.classList.remove('hidden');
-            });
-            adminDeleteAllRoomsBtn.addEventListener('click', () => {
-                passwordModalTitle.textContent = 'Delete All Rooms';
-                passwordModalText.textContent = 'Enter the admin password to delete all rooms.';
-                confirmBtn.dataset.action = 'delete-all';
-                passwordModal.classList.remove('hidden');
-            });
-            switchToUserModeBtn.addEventListener('click', switchToUserMode);
-            confirmSwitchBtn.addEventListener('click', handleSwitchToUserMode);
-            cancelSwitchBtn.addEventListener('click', () => usernameModal.classList.add('hidden'));
-            cancelBtn.addEventListener('click', () => {
-                passwordModal.classList.add('hidden');
-                passwordInput.value = '';
-            });
-            confirmBtn.addEventListener('click', () => {
-                if (passwordInput.value === 'max') {
-                    const action = confirmBtn.dataset.action;
-                    if (action === 'delete-all') deleteAllRooms();
-                    else if (action.startsWith('delete-room:')) deleteRoom(action.split(':')[1]);
-                    else if (action === 'clear-public-chat') clearPublicChat();
-                    else if (action.startsWith('clear-room-chat:')) clearRoomChat(action.split(':')[1]);
-                    passwordModal.classList.add('hidden');
-                    passwordInput.value = '';
-                } else {
-                    showMessage('Incorrect password.', true);
-                    passwordInput.value = '';
-                }
-            });
-            sendAnnouncementBtn.addEventListener('click', sendAnnouncement);
-            refreshAdminDataBtn.addEventListener('click', refreshAdminData);
-            clearPublicChatBtn.addEventListener('click', () => {
-                 passwordModalTitle.textContent = 'Clear Waiting Room Chat';
-                 passwordModalText.textContent = 'Enter the admin password to clear all messages in the public chat.';
-                 confirmBtn.dataset.action = 'clear-public-chat';
-                 passwordModal.classList.remove('hidden');
-            });
-        });
+        // --- Initialize App ---
+        init();
 
     </script>
 </body>
 </html>
+
