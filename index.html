@@ -210,10 +210,18 @@
         // Set Firebase debug logs
         setLogLevel('debug');
 
-        // Global variables provided by the environment
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        // Your Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBluS1Dl9abDJjPPeOhvTCfP8J1kyIh6BQ",
+            authDomain: "video-meeting-e73eb.firebaseapp.com",
+            databaseURL: "https://video-meeting-e73eb-default-rtdb.firebaseio.com",
+            projectId: "video-meeting-e73eb",
+            storageBucket: "video-meeting-e73eb.firebasestorage.app",
+            messagingSenderId: "80496795033",
+            appId: "1:80496795033:web:699053568ddccb0c77c708",
+            measurementId: "G-6TC6DG1KGC"
+        };
+        const appId = firebaseConfig.appId;
 
         // Initialize Firebase
         let app, db, auth;
@@ -616,17 +624,11 @@
         const init = async () => {
             if (auth) {
                 try {
-                    if (initialAuthToken) {
-                        await signInWithCustomToken(auth, initialAuthToken);
-                        userId = auth.currentUser.uid;
-                        authInfoEl.textContent = `Authenticated as user: ${userId}`;
-                        loginButton.textContent = "Log In to Edit";
-                    } else {
-                        await signInAnonymously(auth);
-                        userId = auth.currentUser.uid;
-                        authInfoEl.textContent = `Signed in anonymously.`;
-                        loginButton.textContent = "Log In to Edit";
-                    }
+                    // We don't have an initial auth token on GitHub Pages, so we sign in anonymously
+                    await signInAnonymously(auth);
+                    userId = auth.currentUser.uid;
+                    authInfoEl.textContent = `Signed in anonymously.`;
+                    loginButton.textContent = "Log In to Edit";
                 } catch (error) {
                     console.error("Firebase auth failed:", error);
                     authInfoEl.textContent = "Authentication failed. App will be read-only.";
