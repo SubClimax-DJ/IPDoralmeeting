@@ -53,6 +53,17 @@
             border-color: var(--gruvbox-blue);
             outline: none;
         }
+        
+        /* Time input specific style */
+        .gruvbox-input[type="time"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+        }
+        .gruvbox-input[type="time"]::-moz-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+        }
+
 
         .gruvbox-delete-button {
             background-color: var(--gruvbox-red);
@@ -165,6 +176,14 @@
                     <input type="date" id="event-date" class="gruvbox-input w-full p-3 rounded-lg" required>
                 </div>
                 <div>
+                    <label for="event-time" class="block mb-2 font-semibold">Time</label>
+                    <input type="time" id="event-time" class="gruvbox-input w-full p-3 rounded-lg">
+                </div>
+                <div>
+                    <label for="event-location" class="block mb-2 font-semibold">Location</label>
+                    <input type="text" id="event-location" class="gruvbox-input w-full p-3 rounded-lg" placeholder="e.g. Main Gym">
+                </div>
+                <div>
                     <label for="event-description" class="block mb-2 font-semibold">Description</label>
                     <textarea id="event-description" class="gruvbox-textarea w-full p-3 rounded-lg" rows="4"></textarea>
                 </div>
@@ -172,6 +191,34 @@
                     <label for="event-color" class="block mb-2 font-semibold">Event Color</label>
                     <input type="color" id="event-color" class="w-full h-12 rounded-lg" value="#98971a">
                 </div>
+
+                <!-- Recurrence Options -->
+                <div class="mt-8 pt-4 border-t border-gray-600">
+                    <div class="flex items-center mb-4">
+                        <input type="checkbox" id="recurrence-toggle" class="mr-2 h-4 w-4 text-gruvbox-green border-gray-300 rounded focus:ring-gruvbox-green">
+                        <label for="recurrence-toggle" class="font-semibold">Enable Recurring Event</label>
+                    </div>
+
+                    <div id="recurrence-options" class="hidden space-y-4">
+                        <div>
+                            <label class="block mb-2 font-semibold">Repeat on:</label>
+                            <div class="grid grid-cols-3 sm:grid-cols-7 gap-2">
+                                <label class="flex items-center"><input type="checkbox" class="recurrence-day mr-1" value="0"> Sun</label>
+                                <label class="flex items-center"><input type="checkbox" class="recurrence-day mr-1" value="1"> Mon</label>
+                                <label class="flex items-center"><input type="checkbox" class="recurrence-day mr-1" value="2"> Tue</label>
+                                <label class="flex items-center"><input type="checkbox" class="recurrence-day mr-1" value="3"> Wed</label>
+                                <label class="flex items-center"><input type="checkbox" class="recurrence-day mr-1" value="4"> Thu</label>
+                                <label class="flex items-center"><input type="checkbox" class="recurrence-day mr-1" value="5"> Fri</label>
+                                <label class="flex items-center"><input type="checkbox" class="recurrence-day mr-1" value="6"> Sat</label>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="recurrence-weeks" class="block mb-2 font-semibold">For how many weeks?</label>
+                            <input type="number" id="recurrence-weeks" class="gruvbox-input w-full p-3 rounded-lg" min="1" max="52" value="4">
+                        </div>
+                    </div>
+                </div>
+
                 <div class="flex justify-center gap-4">
                     <button type="submit" class="gruvbox-button rounded-lg px-6 py-3 font-semibold">
                         Save Event
@@ -254,6 +301,8 @@
         const eventIdInput = document.getElementById('event-id');
         const eventTitleInput = document.getElementById('event-title');
         const eventDateInput = document.getElementById('event-date');
+        const eventTimeInput = document.getElementById('event-time');
+        const eventLocationInput = document.getElementById('event-location');
         const eventDescriptionInput = document.getElementById('event-description');
         const eventColorInput = document.getElementById('event-color');
         const deleteEventButton = document.getElementById('delete-event-button');
@@ -263,6 +312,13 @@
         const modalDateTitleEl = document.getElementById('modal-date-title');
         const modalEventsListEl = document.getElementById('modal-events-list');
         const closeEventDetailsModalBtn = document.getElementById('close-event-details-modal');
+
+        // New Recurrence elements
+        const recurrenceToggle = document.getElementById('recurrence-toggle');
+        const recurrenceOptionsDiv = document.getElementById('recurrence-options');
+        const recurrenceDays = document.querySelectorAll('.recurrence-day');
+        const recurrenceWeeksInput = document.getElementById('recurrence-weeks');
+
 
         let events = {};
         let isEditMode = false;
@@ -306,7 +362,8 @@
                     eventDiv.style.borderColor = event.color || 'var(--gruvbox-gray)';
                     eventDiv.innerHTML = `
                         <h3 class="text-lg font-bold" style="color: ${event.color || 'var(--gruvbox-green)'}">${event.title}</h3>
-                        <p class="text-sm text-gray-400">Date: ${event.date}</p>
+                        ${event.time ? `<p class="text-sm text-gray-400">Time: ${event.time}</p>` : ''}
+                        ${event.location ? `<p class="text-sm text-gray-400">Location: ${event.location}</p>` : ''}
                         <p class="text-base">${event.description || 'No description provided.'}</p>
                     `;
                     modalEventsListEl.appendChild(eventDiv);
@@ -392,7 +449,7 @@
                         'truncate', 'cursor-pointer'
                     );
                     eventEl.style.backgroundColor = event.color || 'var(--gruvbox-green)';
-                    eventEl.textContent = event.title;
+                    eventEl.textContent = `${event.time ? event.time + ' - ' : ''}${event.title}`;
                     if (isEditMode) {
                         eventEl.onclick = (e) => {
                             e.stopPropagation();
@@ -422,9 +479,14 @@
                         newEvents[dateString].push(eventData);
                     });
                     
-                    // Sort events by date and time if available
+                    // Sort events by date and time
                     for (const date in newEvents) {
-                        newEvents[date].sort((a, b) => a.date.localeCompare(b.date));
+                        newEvents[date].sort((a, b) => {
+                            if (a.time && b.time) return a.time.localeCompare(b.time);
+                            if (a.time) return -1;
+                            if (b.time) return 1;
+                            return 0;
+                        });
                     }
                     
                     events = newEvents;
@@ -485,12 +547,21 @@
             
             eventDateInput.value = dateString;
             eventColorInput.value = '#98971a';
+            eventTimeInput.value = '';
+            eventLocationInput.value = '';
+            
+            recurrenceToggle.checked = false;
+            recurrenceOptionsDiv.classList.add('hidden');
+            recurrenceDays.forEach(day => day.checked = false);
+            recurrenceWeeksInput.value = 4;
 
             if (eventData) {
                 eventIdInput.value = eventId;
                 eventTitleInput.value = eventData.title || '';
                 eventDescriptionInput.value = eventData.description || '';
                 eventColorInput.value = eventData.color || '#98971a';
+                eventTimeInput.value = eventData.time || '';
+                eventLocationInput.value = eventData.location || '';
                 deleteEventButton.classList.remove('hidden');
             }
 
@@ -514,19 +585,50 @@
             const eventData = {
                 title: eventTitleInput.value,
                 date: eventDateInput.value,
+                time: eventTimeInput.value,
+                location: eventLocationInput.value,
                 description: eventDescriptionInput.value,
                 color: eventColorInput.value,
                 ownerId: userId // Store the user ID for potential future use
             };
 
             try {
-                if (eventId) {
-                    // Update an existing event
+                if (recurrenceToggle.checked && !eventId) {
+                    // Create recurring events
+                    const startDate = new Date(eventData.date);
+                    const weeksToRepeat = parseInt(recurrenceWeeksInput.value);
+                    const selectedDays = Array.from(recurrenceDays)
+                        .filter(day => day.checked)
+                        .map(day => parseInt(day.value));
+
+                    if (selectedDays.length === 0 || weeksToRepeat <= 0) {
+                        showMessage('Please select at least one day and a positive number of weeks for recurring events.');
+                        return;
+                    }
+                    
+                    let count = 0;
+                    for (let i = 0; i < weeksToRepeat; i++) {
+                        selectedDays.forEach(dayOfWeek => {
+                            const newDate = new Date(startDate);
+                            const dayDiff = dayOfWeek - startDate.getDay();
+                            newDate.setDate(startDate.getDate() + dayDiff + (i * 7));
+                            
+                            const newEventData = {
+                                ...eventData,
+                                date: formatDate(newDate)
+                            };
+                            addDoc(collection(db, `artifacts/${appId}/public/data/${COLLECTION_NAME}`), newEventData);
+                            count++;
+                        });
+                    }
+                    showMessage(`${count} events created successfully!`);
+                } else if (eventId) {
+                    // Update a single existing event
                     const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_NAME}/${eventId}`);
                     await updateDoc(docRef, eventData);
                     showMessage('Event updated successfully!');
                 } else {
-                    // Create a new event
+                    // Create a single new event
                     await addDoc(collection(db, `artifacts/${appId}/public/data/${COLLECTION_NAME}`), eventData);
                     showMessage('Event saved successfully!');
                 }
@@ -534,6 +636,7 @@
                 showEventForm(eventDateInput.value); // Reset form for next entry
             } catch (e) {
                 console.error("Error saving event:", e);
+                showMessage('Error saving event. Please try again.');
             }
         };
 
@@ -619,6 +722,20 @@
         closeEventDetailsModalBtn.addEventListener('click', closeEventDetailsModal);
         eventForm.addEventListener('submit', handleFormSubmit);
         deleteEventButton.addEventListener('click', handleDeleteEvent);
+        
+        // New: Toggle recurrence options
+        recurrenceToggle.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                recurrenceOptionsDiv.classList.remove('hidden');
+                // Hide single event date input, as it will be derived from recurrence
+                eventDateInput.disabled = true;
+                eventDateInput.required = false;
+            } else {
+                recurrenceOptionsDiv.classList.add('hidden');
+                eventDateInput.disabled = false;
+                eventDateInput.required = true;
+            }
+        });
 
         // Initial setup
         const init = async () => {
