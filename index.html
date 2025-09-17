@@ -3,430 +3,640 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Virtual Parent-Teacher Conferences</title>
+    <title>Sports Calendar</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+        :root {
+            --gruvbox-bg: #282828;
+            --gruvbox-fg: #ebdbb2;
+            --gruvbox-red: #cc241d;
+            --gruvbox-green: #98971a;
+            --gruvbox-yellow: #d79921;
+            --gruvbox-blue: #458588;
+            --gruvbox-purple: #b16286;
+            --gruvbox-aqua: #689d6a;
+            --gruvbox-orange: #d65d0e;
+            --gruvbox-gray: #a89984;
+            --gruvbox-light-bg: #3c3836;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
+            background-color: var(--gruvbox-bg);
+            color: var(--gruvbox-fg);
         }
-        .chat-bubble {
-            max-width: 75%;
+
+        .gruvbox-card {
+            background-color: var(--gruvbox-light-bg);
+            border: 2px solid var(--gruvbox-gray);
         }
-        .chat-bubble-me {
-            background-color: #458588; /* Gruvbox Blue */
-            color: #282828;
+
+        .gruvbox-button {
+            background-color: var(--gruvbox-green);
+            color: var(--gruvbox-bg);
+            transition: all 0.2s ease-in-out;
         }
-        .chat-bubble-other {
-            background-color: #7c6f64; /* Gruvbox Gray */
-            color: #ebdbb2;
+
+        .gruvbox-button:hover {
+            background-color: var(--gruvbox-aqua);
         }
-        /* Custom scrollbar for chat */
-        .chat-messages::-webkit-scrollbar {
-            width: 8px;
+
+        .gruvbox-input, .gruvbox-textarea {
+            background-color: var(--gruvbox-bg);
+            color: var(--gruvbox-fg);
+            border: 1px solid var(--gruvbox-gray);
         }
-        .chat-messages::-webkit-scrollbar-track {
-            background: #282828;
+
+        .gruvbox-input:focus, .gruvbox-textarea:focus {
+            border-color: var(--gruvbox-blue);
+            outline: none;
         }
-        .chat-messages::-webkit-scrollbar-thumb {
-            background: #665c54;
-            border-radius: 4px;
+
+        .gruvbox-delete-button {
+            background-color: var(--gruvbox-red);
+            color: var(--gruvbox-bg);
+            transition: all 0.2s ease-in-out;
         }
-        #screen-share-placeholder {
-            background-color: #1d2021;
-            background-image: repeating-linear-gradient(45deg, #3c3836 25%, transparent 25%, transparent 75%, #3c3836 75%, #3c3836), repeating-linear-gradient(45deg, #3c3836 25%, #1d2021 25%, #1d2021 75%, #3c3836 75%, #3c3836);
-            background-position: 0 0, 10px 10px;
-            background-size: 20px 20px;
-            border: 2px dashed #665c54;
+
+        .gruvbox-delete-button:hover {
+            background-color: var(--gruvbox-orange);
+        }
+
+        .message-box {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 1rem 2rem;
+            background-color: var(--gruvbox-green);
+            color: var(--gruvbox-bg);
+            border-radius: 8px;
+            font-weight: 600;
+            z-index: 100;
+            animation: fadeInOut 3s forwards;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; }
+            10%, 90% { opacity: 1; }
+        }
+        
+        .day-cell {
+            min-height: 120px;
+            transition: background-color 0.2s, border-color 0.2s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @media (min-width: 640px) {
+            .day-cell {
+                min-height: 150px;
+            }
         }
     </style>
 </head>
-<body class="bg-[#282828] text-[#ebdbb2] antialiased">
+<body class="flex flex-col min-h-screen items-center py-12">
 
-    <!-- App Container -->
-    <div id="app" class="h-screen w-screen flex items-center justify-center transition-opacity duration-500">
+    <!-- Message Box Container -->
+    <div id="message-container"></div>
 
-        <!-- Login View -->
-        <div id="login-view" class="w-full max-w-md p-8 bg-[#3c3836] rounded-2xl shadow-xl border border-[#504945]">
-            <h1 class="text-3xl font-bold text-center mb-2 text-[#ebdbb2]">Office Hours</h1>
-            <p class="text-center text-[#a89984] mb-8">Please enter your name to join the lobby.</p>
-            <form id="login-form" class="space-y-6">
-                <div>
-                    <label for="name" class="text-sm font-medium text-[#d5c4a1]">Your Name</label>
-                    <input type="text" id="name" name="name" class="mt-1 block w-full px-4 py-3 bg-[#504945] border border-[#665c54] rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#83a598] focus:border-transparent text-[#ebdbb2] placeholder:text-[#a89984]" placeholder="e.g., Jane Doe" required>
-                </div>
-                <button type="submit" class="w-full bg-[#458588] hover:bg-[#83a598] text-[#282828] font-bold py-3 px-4 rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-150 ease-in-out">
-                    Join Waiting Room
-                </button>
-            </form>
-             <p class="text-xs text-center text-[#a89984] mt-4">Teacher: Enter your name and add "(Teacher)"</p>
+    <!-- Main App Container -->
+    <div class="container mx-auto px-4 w-full max-w-7xl">
+        <div class="text-center mb-8">
+            <!-- School Logo -->
+            <img src="https://www.miamidadecountyauditorium.org/wp-content/uploads/2019/04/DoralAcademy_Web2019.jpg" alt="Doral Academy Logo" class="mx-auto h-20 mb-4 rounded-lg shadow-lg">
+            <h1 class="text-4xl sm:text-5xl font-bold mb-2">Sports Calendar</h1>
+            <p class="text-lg text-gray-400">View upcoming practices and games.</p>
         </div>
 
-        <!-- Lobby View -->
-        <div id="lobby-view" class="hidden h-screen w-screen flex flex-col p-4 md:p-6 lg:p-8 bg-[#282828]">
-            <header class="mb-6 flex justify-between items-center">
-                <div>
-                    <h1 class="text-3xl font-bold text-[#ebdbb2]">Lobby</h1>
-                    <p class="text-[#a89984]">Please wait for the teacher to start the conference.</p>
-                </div>
-                 <button id="leave-lobby-btn" class="bg-[#cc241d] hover:bg-[#fb4934] text-[#ebdbb2] font-bold py-2 px-4 rounded-lg shadow-md transition-transform duration-150 hover:scale-105">
-                    Leave
-                </button>
-            </header>
-            <div class="flex-grow grid grid-cols-1 lg:grid-cols-3 gap-6 h-full overflow-hidden">
-                <!-- Parents List -->
-                <div class="lg:col-span-1 bg-[#3c3836] border border-[#504945] rounded-2xl shadow-lg p-6 flex flex-col h-full">
-                    <h2 class="text-xl font-semibold mb-4 border-b border-[#504945] pb-3 text-[#ebdbb2]">Waiting Parents</h2>
-                    <ul id="parents-list" class="space-y-3 overflow-y-auto flex-grow pr-2">
-                        <!-- Parent items will be injected here -->
-                    </ul>
-                </div>
-                <!-- Lobby Chat -->
-                <div class="lg:col-span-2 bg-[#3c3836] border border-[#504945] rounded-2xl shadow-lg p-6 flex flex-col h-full">
-                    <h2 class="text-xl font-semibold mb-4 border-b border-[#504945] pb-3 text-[#ebdbb2]">Lobby Chat</h2>
-                    <div id="lobby-chat-messages" class="flex-grow space-y-4 overflow-y-auto p-4 bg-[#282828] rounded-lg mb-4 chat-messages">
-                        <!-- Chat messages will be injected here -->
-                    </div>
-                    <form id="lobby-chat-form" class="flex items-center gap-4">
-                        <input type="text" id="lobby-chat-input" class="flex-grow px-4 py-2 bg-[#504945] border border-[#665c54] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#83a598] text-[#ebdbb2] placeholder:text-[#a89984]" placeholder="Type a message..." required>
-                        <button type="submit" class="bg-[#458588] hover:bg-[#83a598] text-[#282828] font-bold py-2 px-4 rounded-lg shadow-md transition-transform duration-150 hover:scale-105">Send</button>
-                    </form>
+        <div id="auth-info" class="mb-4 text-center text-sm text-gray-400"></div>
+
+        <!-- Login/Add Event Button -->
+        <div class="flex justify-center items-center gap-4 mb-8">
+            <button id="login-button" class="gruvbox-button rounded-lg px-6 py-3 font-semibold shadow-md">
+                Log In to Edit
+            </button>
+            <button id="logout-button" class="bg-gray-500 text-white rounded-lg px-6 py-3 font-semibold shadow-md hidden">
+                Log Out
+            </button>
+        </div>
+
+        <!-- Password Modal (Initially Hidden) -->
+        <div id="password-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black bg-opacity-75 p-4">
+            <div class="gruvbox-card rounded-xl shadow-2xl p-6 sm:p-8 w-full max-w-sm">
+                <h2 class="text-2xl font-bold mb-4 text-center">Enter Password</h2>
+                <input type="password" id="password-input" class="gruvbox-input w-full p-3 rounded-lg mb-4 text-center" placeholder="Password">
+                <p id="password-error" class="text-gruvbox-red text-center mb-4 hidden">Incorrect password.</p>
+                <div class="flex justify-center gap-4">
+                    <button id="submit-password-button" class="gruvbox-button rounded-lg px-6 py-3 font-semibold">
+                        Submit
+                    </button>
+                    <button id="close-password-modal" class="bg-gray-500 text-white rounded-lg px-6 py-3 font-semibold hover:bg-gray-600 transition-colors">
+                        Cancel
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- Conference View -->
-        <div id="conference-view" class="hidden h-screen w-screen flex flex-col bg-[#1d2021]">
-            <header class="p-4 flex justify-between items-center bg-[#3c3836] shadow-md border-b border-[#504945]">
-                <h1 class="text-2xl font-bold text-[#ebdbb2]">1-on-1 Conference</h1>
-                <button id="leave-conference-btn" class="bg-[#cc241d] hover:bg-[#fb4934] text-[#ebdbb2] font-bold py-2 px-4 rounded-lg shadow-md transition-transform duration-150 hover:scale-105">
-                    End Conference
-                </button>
-            </header>
-            <main class="flex-grow grid grid-cols-1 lg:grid-cols-3 gap-4 p-4 overflow-hidden">
-                <!-- Screen Share Area -->
-                <div class="lg:col-span-2 bg-[#3c3836] border border-[#504945] rounded-xl shadow-lg flex flex-col items-center justify-center p-4">
-                    <div id="screen-share-placeholder" class="w-full h-full rounded-lg flex items-center justify-center">
-                        <p class="text-[#a89984] text-lg">Screen Sharing Area</p>
-                    </div>
+        <!-- Single Calendar Display Section -->
+        <div id="calendar-view" class="gruvbox-card p-6 rounded-2xl shadow-lg">
+            <div class="flex items-center justify-between mb-4">
+                <button id="prev-month-button" class="gruvbox-button rounded-full p-3 font-bold">&lt;</button>
+                <h2 id="month-title" class="text-3xl font-bold text-center flex-grow"></h2>
+                <button id="next-month-button" class="gruvbox-button rounded-full p-3 font-bold">&gt;</button>
+            </div>
+            <div id="calendar-grid" class="grid grid-cols-7 gap-1 text-center"></div>
+        </div>
+        
+        <!-- Add/Edit Event Section (Initially Hidden) -->
+        <div id="edit-section" class="hidden mt-8 gruvbox-card p-6 rounded-2xl shadow-lg w-full max-w-2xl mx-auto">
+            <h2 class="text-2xl font-bold mb-4 text-center">Add or Edit Event</h2>
+            <form id="event-form" class="space-y-4">
+                <input type="hidden" id="event-id">
+                <div>
+                    <label for="event-title" class="block mb-2 font-semibold">Event Title</label>
+                    <input type="text" id="event-title" class="gruvbox-input w-full p-3 rounded-lg" required>
                 </div>
-                <!-- Conference Chat -->
-                <div class="lg:col-span-1 bg-[#3c3836] border border-[#504945] rounded-xl shadow-lg flex flex-col h-full">
-                     <h2 class="text-lg font-semibold p-4 border-b border-[#504945] text-[#ebdbb2]">Private Chat</h2>
-                    <div id="conference-chat-messages" class="flex-grow space-y-4 overflow-y-auto p-4 bg-[#282828] chat-messages">
-                        <!-- Private chat messages will be injected here -->
-                    </div>
-                    <form id="conference-chat-form" class="p-4 border-t border-[#504945] flex items-center gap-4">
-                        <input type="text" id="conference-chat-input" class="flex-grow px-4 py-2 bg-[#504945] border border-[#665c54] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#83a598] text-[#ebdbb2] placeholder:text-[#a89984]" placeholder="Type a message..." required>
-                        <button type="submit" class="bg-[#458588] hover:bg-[#83a598] text-[#282828] font-bold py-2 px-4 rounded-lg shadow-md transition-transform duration-150 hover:scale-105">Send</button>
-                    </form>
+                <div>
+                    <label for="event-date" class="block mb-2 font-semibold">Date</label>
+                    <input type="date" id="event-date" class="gruvbox-input w-full p-3 rounded-lg" required>
                 </div>
-            </main>
+                <div>
+                    <label for="event-description" class="block mb-2 font-semibold">Description</label>
+                    <textarea id="event-description" class="gruvbox-textarea w-full p-3 rounded-lg" rows="4"></textarea>
+                </div>
+                <div>
+                    <label for="event-color" class="block mb-2 font-semibold">Event Color</label>
+                    <input type="color" id="event-color" class="w-full h-12 rounded-lg" value="#98971a">
+                </div>
+                <div class="flex justify-center gap-4">
+                    <button type="submit" class="gruvbox-button rounded-lg px-6 py-3 font-semibold">
+                        Save Event
+                    </button>
+                    <button type="button" id="delete-event-button" class="gruvbox-delete-button rounded-lg px-6 py-3 font-semibold hidden">
+                        Delete Event
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Event Details Modal (Initially Hidden) -->
+        <div id="event-details-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black bg-opacity-75 p-4">
+            <div class="gruvbox-card rounded-xl shadow-2xl p-6 sm:p-8 w-full max-w-md max-h-[80vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 id="modal-date-title" class="text-2xl font-bold"></h2>
+                    <button id="close-event-details-modal" class="text-gruvbox-fg hover:text-gruvbox-red transition-colors font-bold text-2xl">
+                        &times;
+                    </button>
+                </div>
+                <div id="modal-events-list" class="space-y-4">
+                    <!-- Events will be populated here -->
+                </div>
+            </div>
         </div>
 
     </div>
 
-    <!-- Firebase -->
+    <!-- Firebase SDKs -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, collection, addDoc, query, serverTimestamp, orderBy, deleteDoc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-        // --- DO NOT EDIT ---
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "YOUR_API_KEY", authDomain: "YOUR_AUTH_DOMAIN", projectId: "YOUR_PROJECT_ID" };
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-office-hours';
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : undefined;
-        // -------------------
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, addDoc, updateDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        // Set Firebase debug logs
+        setLogLevel('debug');
 
-        const state = {
-            currentUser: null,
-            isTeacher: false,
-            currentConferenceId: null,
-            unsubscribers: [],
+        // Global variables provided by the environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Initialize Firebase
+        let app, db, auth;
+        try {
+            if (Object.keys(firebaseConfig).length > 0) {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+            } else {
+                console.error("Firebase config is missing. The app will run without database functionality.");
+            }
+        } catch (e) {
+            console.error("Failed to initialize Firebase:", e);
+        }
+
+        // DOM elements
+        const calendarGridEl = document.getElementById('calendar-grid');
+        const monthTitleEl = document.getElementById('month-title');
+        const prevMonthButton = document.getElementById('prev-month-button');
+        const nextMonthButton = document.getElementById('next-month-button');
+        const loginButton = document.getElementById('login-button');
+        const logoutButton = document.getElementById('logout-button');
+        const passwordModal = document.getElementById('password-modal');
+        const passwordInput = document.getElementById('password-input');
+        const passwordError = document.getElementById('password-error');
+        const submitPasswordBtn = document.getElementById('submit-password-button');
+        const closePasswordModalBtn = document.getElementById('close-password-modal');
+        const editSection = document.getElementById('edit-section');
+        const eventForm = document.getElementById('event-form');
+        const eventIdInput = document.getElementById('event-id');
+        const eventTitleInput = document.getElementById('event-title');
+        const eventDateInput = document.getElementById('event-date');
+        const eventDescriptionInput = document.getElementById('event-description');
+        const eventColorInput = document.getElementById('event-color');
+        const deleteEventButton = document.getElementById('delete-event-button');
+        const authInfoEl = document.getElementById('auth-info');
+        const messageContainer = document.getElementById('message-container');
+        const eventDetailsModal = document.getElementById('event-details-modal');
+        const modalDateTitleEl = document.getElementById('modal-date-title');
+        const modalEventsListEl = document.getElementById('modal-events-list');
+        const closeEventDetailsModalBtn = document.getElementById('close-event-details-modal');
+
+        let events = {};
+        let isEditMode = false;
+        let userId = null;
+        let currentDate = new Date(); // State for the currently displayed month
+
+        // Constants
+        const PASSWORD = 'runfast';
+        const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        const COLLECTION_NAME = 'events';
+        const schoolYearEndMonth = 4; // May (0-indexed)
+
+        // Utility to format date string
+        const formatDate = (date) => {
+            const d = new Date(date);
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         };
 
-        // DOM Elements
-        const loginView = document.getElementById('login-view');
-        const lobbyView = document.getElementById('lobby-view');
-        const conferenceView = document.getElementById('conference-view');
-        
-        // --- Core Logic ---
-        
-        async function init() {
-            onAuthStateChanged(auth, async (user) => {
-                if (user) {
-                    state.currentUser = user;
-                    // User is signed in. Now check if they have a profile.
-                    const userDoc = await getDoc(doc(db, `artifacts/${appId}/public/data/users`, user.uid));
-                    if(userDoc.exists()) {
-                        handleExistingSession(userDoc.data());
+        const showMessage = (message) => {
+            const msgEl = document.createElement('div');
+            msgEl.className = 'message-box';
+            msgEl.textContent = message;
+            messageContainer.appendChild(msgEl);
+            setTimeout(() => {
+                messageContainer.removeChild(msgEl);
+            }, 3000);
+        };
+
+        const showEventDetails = (dateString) => {
+            const dateObj = new Date(dateString);
+            const formattedDate = `${MONTHS[dateObj.getMonth()]} ${dateObj.getDate()}, ${dateObj.getFullYear()}`;
+            modalDateTitleEl.textContent = formattedDate;
+            modalEventsListEl.innerHTML = '';
+            
+            const dayEvents = events[dateString] || [];
+            if (dayEvents.length > 0) {
+                dayEvents.forEach(event => {
+                    const eventDiv = document.createElement('div');
+                    eventDiv.classList.add('p-4', 'rounded-lg', 'gruvbox-card', 'space-y-2');
+                    eventDiv.style.borderColor = event.color || 'var(--gruvbox-gray)';
+                    eventDiv.innerHTML = `
+                        <h3 class="text-lg font-bold" style="color: ${event.color || 'var(--gruvbox-green)'}">${event.title}</h3>
+                        <p class="text-sm text-gray-400">Date: ${event.date}</p>
+                        <p class="text-base">${event.description || 'No description provided.'}</p>
+                    `;
+                    modalEventsListEl.appendChild(eventDiv);
+                });
+            } else {
+                const noEventsMsg = document.createElement('p');
+                noEventsMsg.classList.add('text-center', 'text-gray-400');
+                noEventsMsg.textContent = 'No events for this date.';
+                modalEventsListEl.appendChild(noEventsMsg);
+            }
+
+            eventDetailsModal.classList.remove('hidden');
+        };
+
+        const closeEventDetailsModal = () => {
+            eventDetailsModal.classList.add('hidden');
+        };
+
+        const handleDayClick = (dateString) => {
+            if (isEditMode) {
+                showEventForm(dateString);
+            } else {
+                showEventDetails(dateString);
+            }
+        };
+
+        // Render the calendar for a given month
+        const renderCalendar = (date) => {
+            const month = date.getMonth();
+            const year = date.getFullYear();
+            calendarGridEl.innerHTML = '';
+            monthTitleEl.textContent = `${MONTHS[month]} ${year}`;
+            
+            // Add day headers
+            DAYS_OF_WEEK.forEach(day => {
+                const header = document.createElement('div');
+                header.classList.add('font-bold', 'p-2', 'text-sm', 'md:text-base', 'text-gray-400');
+                header.textContent = day;
+                calendarGridEl.appendChild(header);
+            });
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const today = formatDate(new Date());
+
+            // Add empty placeholders for the first week
+            for (let i = 0; i < firstDay; i++) {
+                const dayEl = document.createElement('div');
+                dayEl.classList.add('w-full', 'day-cell', 'bg-gray-800', 'rounded-lg', 'p-2');
+                calendarGridEl.appendChild(dayEl);
+            }
+
+            // Add the days of the month
+            for (let i = 1; i <= daysInMonth; i++) {
+                const dateString = formatDate(new Date(year, month, i));
+
+                const dayEl = document.createElement('div');
+                dayEl.classList.add(
+                    'w-full', 'day-cell', 'p-2', 'rounded-lg', 'cursor-pointer', 'transition-colors', 'duration-200',
+                    'gruvbox-card', 'hover:bg-gray-600', 'border-gruvbox-light-bg'
+                );
+                
+                if (dateString === today) {
+                    dayEl.classList.add('border-2', 'border-gruvbox-yellow', 'shadow-lg');
+                }
+
+                dayEl.onclick = () => handleDayClick(dateString);
+
+                const dayNumberEl = document.createElement('div');
+                dayNumberEl.classList.add('font-bold', 'text-sm', 'text-gruvbox-yellow');
+                dayNumberEl.textContent = i;
+                dayEl.appendChild(dayNumberEl);
+
+                const eventContainer = document.createElement('div');
+                eventContainer.classList.add('space-y-1', 'mt-1', 'overflow-y-auto', 'text-sm', 'flex-grow');
+                dayEl.appendChild(eventContainer);
+
+                const dayEvents = events[dateString] || [];
+                dayEvents.forEach(event => {
+                    const eventEl = document.createElement('div');
+                    eventEl.classList.add(
+                        'text-gruvbox-bg', 'rounded-md', 'px-1', 'py-0.5', 'text-xs', 'font-medium',
+                        'truncate', 'cursor-pointer'
+                    );
+                    eventEl.style.backgroundColor = event.color || 'var(--gruvbox-green)';
+                    eventEl.textContent = event.title;
+                    if (isEditMode) {
+                        eventEl.onclick = (e) => {
+                            e.stopPropagation();
+                            showEventForm(dateString, event.id, event);
+                        };
                     }
+                    eventContainer.appendChild(eventEl);
+                });
+
+                calendarGridEl.appendChild(dayEl);
+            }
+        };
+
+        // Firestore listener for real-time updates
+        const setupFirestoreListener = async () => {
+            if (!db) return;
+            try {
+                const publicCollectionRef = collection(db, `artifacts/${appId}/public/data/${COLLECTION_NAME}`);
+                onSnapshot(publicCollectionRef, (snapshot) => {
+                    const newEvents = {};
+                    snapshot.forEach(doc => {
+                        const eventData = { id: doc.id, ...doc.data() };
+                        const dateString = eventData.date;
+                        if (!newEvents[dateString]) {
+                            newEvents[dateString] = [];
+                        }
+                        newEvents[dateString].push(eventData);
+                    });
+                    
+                    // Sort events by date and time if available
+                    for (const date in newEvents) {
+                        newEvents[date].sort((a, b) => a.date.localeCompare(b.date));
+                    }
+                    
+                    events = newEvents;
+                    renderCalendar(currentDate);
+                });
+            } catch (error) {
+                console.error("Error setting up Firestore listener:", error);
+                // Graceful degradation: The app will run without real-time updates.
+            }
+        };
+
+        // Show/Hide password modal
+        const showPasswordModal = () => {
+            passwordModal.classList.remove('hidden');
+            passwordInput.value = '';
+            passwordError.classList.add('hidden');
+            passwordInput.focus();
+        };
+
+        const hidePasswordModal = () => {
+            passwordModal.classList.add('hidden');
+        };
+
+        // Handle password submission
+        const handlePasswordSubmit = () => {
+            if (passwordInput.value === PASSWORD) {
+                isEditMode = true;
+                hidePasswordModal();
+                editSection.classList.remove('hidden');
+                loginButton.classList.add('hidden');
+                logoutButton.classList.remove('hidden');
+                authInfoEl.textContent = `Editing enabled. User ID: ${userId || 'anonymous'}`;
+                renderCalendar(currentDate);
+                showMessage('Editing enabled!');
+            } else {
+                passwordError.classList.remove('hidden');
+            }
+        };
+
+        const handleLogout = async () => {
+            if (auth) {
+                await signOut(auth);
+            }
+            isEditMode = false;
+            editSection.classList.add('hidden');
+            loginButton.classList.remove('hidden');
+            logoutButton.classList.add('hidden');
+            authInfoEl.textContent = `Signed in anonymously.`;
+            renderCalendar(currentDate);
+            showMessage('Logged out successfully.');
+        };
+
+        // Show event form with prepopulated data or for a new event
+        const showEventForm = (dateString, eventId = null, eventData = null) => {
+            eventForm.reset();
+            eventIdInput.value = '';
+            deleteEventButton.classList.add('hidden');
+            
+            eventDateInput.value = dateString;
+            eventColorInput.value = '#98971a';
+
+            if (eventData) {
+                eventIdInput.value = eventId;
+                eventTitleInput.value = eventData.title || '';
+                eventDescriptionInput.value = eventData.description || '';
+                eventColorInput.value = eventData.color || '#98971a';
+                deleteEventButton.classList.remove('hidden');
+            }
+
+            editSection.scrollIntoView({ behavior: 'smooth' });
+            eventTitleInput.focus();
+        };
+
+        // Handle form submission
+        const handleFormSubmit = async (e) => {
+            e.preventDefault();
+            if (!db) {
+                console.error("Database not available.");
+                return;
+            }
+            if (!isEditMode) {
+                console.error("Not authorized to edit events.");
+                return;
+            }
+            
+            const eventId = eventIdInput.value;
+            const eventData = {
+                title: eventTitleInput.value,
+                date: eventDateInput.value,
+                description: eventDescriptionInput.value,
+                color: eventColorInput.value,
+                ownerId: userId // Store the user ID for potential future use
+            };
+
+            try {
+                if (eventId) {
+                    // Update an existing event
+                    const docRef = doc(db, `artifacts/${appId}/public/data/${COLLECTION_NAME}/${eventId}`);
+                    await updateDoc(docRef, eventData);
+                    showMessage('Event updated successfully!');
                 } else {
-                    // User is signed out.
-                    if(initialAuthToken) {
+                    // Create a new event
+                    await addDoc(collection(db, `artifacts/${appId}/public/data/${COLLECTION_NAME}`), eventData);
+                    showMessage('Event saved successfully!');
+                }
+                eventForm.reset();
+                showEventForm(eventDateInput.value); // Reset form for next entry
+            } catch (e) {
+                console.error("Error saving event:", e);
+            }
+        };
+
+        // Handle event deletion
+        const handleDeleteEvent = async () => {
+            if (!db) {
+                console.error("Database not available.");
+                return;
+            }
+            const eventId = eventIdInput.value;
+            if (!eventId) return;
+
+            // Custom confirmation modal logic
+            const confirmDelete = await new Promise((resolve) => {
+                const modal = document.createElement('div');
+                modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4';
+                modal.innerHTML = `
+                    <div class="gruvbox-card rounded-xl shadow-2xl p-6 sm:p-8 w-full max-w-sm">
+                        <h2 class="text-2xl font-bold mb-4 text-center">Confirm Deletion</h2>
+                        <p class="text-center mb-4">Are you sure you want to delete this event?</p>
+                        <div class="flex justify-center gap-4">
+                            <button id="confirm-delete-button" class="gruvbox-delete-button rounded-lg px-6 py-3 font-semibold">
+                                Delete
+                            </button>
+                            <button id="cancel-delete-button" class="bg-gray-500 text-white rounded-lg px-6 py-3 font-semibold hover:bg-gray-600 transition-colors">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+
+                document.getElementById('confirm-delete-button').onclick = () => {
+                    document.body.removeChild(modal);
+                    resolve(true);
+                };
+                document.getElementById('cancel-delete-button').onclick = () => {
+                    document.body.removeChild(modal);
+                    resolve(false);
+                };
+            });
+
+            if (confirmDelete) {
+                try {
+                    await deleteDoc(doc(db, `artifacts/${appId}/public/data/${COLLECTION_NAME}/${eventId}`));
+                    eventForm.reset();
+                    showEventForm(eventDateInput.value); // Reset form
+                    showMessage('Event deleted successfully!');
+                } catch (e) {
+                    console.error("Error deleting event:", e);
+                }
+            }
+        };
+        
+        // Navigation functions
+        const showPreviousMonth = () => {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            if (currentDate.getFullYear() < new Date().getFullYear() || 
+                (currentDate.getFullYear() === new Date().getFullYear() && currentDate.getMonth() < new Date().getMonth())) {
+                currentDate = new Date(); // Don't go back before the current month
+            }
+            renderCalendar(currentDate);
+        };
+
+        const showNextMonth = () => {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            // Limit navigation up to next May
+            const nextSchoolYearEnd = new Date().getFullYear() + (new Date().getMonth() > schoolYearEndMonth ? 1 : 0);
+            if (currentDate.getFullYear() > nextSchoolYearEnd || 
+                (currentDate.getFullYear() === nextSchoolYearEnd && currentDate.getMonth() > schoolYearEndMonth)) {
+                currentDate.setMonth(currentDate.getMonth() - 1); // Stay at the last allowed month
+            }
+            renderCalendar(currentDate);
+        };
+
+        // Event listeners
+        prevMonthButton.addEventListener('click', showPreviousMonth);
+        nextMonthButton.addEventListener('click', showNextMonth);
+        loginButton.addEventListener('click', showPasswordModal);
+        logoutButton.addEventListener('click', handleLogout);
+        closePasswordModalBtn.addEventListener('click', hidePasswordModal);
+        submitPasswordBtn.addEventListener('click', handlePasswordSubmit);
+        closeEventDetailsModalBtn.addEventListener('click', closeEventDetailsModal);
+        eventForm.addEventListener('submit', handleFormSubmit);
+        deleteEventButton.addEventListener('click', handleDeleteEvent);
+
+        // Initial setup
+        const init = async () => {
+            if (auth) {
+                try {
+                    if (initialAuthToken) {
                         await signInWithCustomToken(auth, initialAuthToken);
+                        userId = auth.currentUser.uid;
+                        authInfoEl.textContent = `Authenticated as user: ${userId}`;
+                        loginButton.textContent = "Log In to Edit";
                     } else {
                         await signInAnonymously(auth);
+                        userId = auth.currentUser.uid;
+                        authInfoEl.textContent = `Signed in anonymously.`;
+                        loginButton.textContent = "Log In to Edit";
                     }
+                } catch (error) {
+                    console.error("Firebase auth failed:", error);
+                    authInfoEl.textContent = "Authentication failed. App will be read-only.";
                 }
-            });
-
-            setupEventListeners();
-        }
-
-        function handleExistingSession(userData) {
-            state.isTeacher = userData.isTeacher;
-            if (userData.status === 'in-conference') {
-                showConferenceView(userData.conferenceId);
-            } else {
-                showLobbyView();
             }
-        }
-        
-        function setupEventListeners() {
-            document.getElementById('login-form').addEventListener('submit', handleLogin);
-            document.getElementById('lobby-chat-form').addEventListener('submit', handleLobbyChat);
-            document.getElementById('conference-chat-form').addEventListener('submit', handleConferenceChat);
-            document.getElementById('leave-lobby-btn').addEventListener('click', handleLogout);
-            document.getElementById('leave-conference-btn').addEventListener('click', handleLeaveConference);
-        }
+            renderCalendar(currentDate);
+            setupFirestoreListener();
+        };
 
-        async function handleLogin(e) {
-            e.preventDefault();
-            const nameInput = document.getElementById('name');
-            let name = nameInput.value.trim();
-
-            if (!name || !state.currentUser) return;
-            
-            state.isTeacher = name.toLowerCase().includes('(teacher)');
-            if(state.isTeacher) {
-                name = name.replace(/\(teacher\)/i, '').trim();
-            }
-
-            const userRef = doc(db, `artifacts/${appId}/public/data/users`, state.currentUser.uid);
-            await setDoc(userRef, {
-                name: name,
-                uid: state.currentUser.uid,
-                isTeacher: state.isTeacher,
-                status: 'lobby'
-            });
-
-            showLobbyView();
-        }
-        
-        async function handleLogout() {
-             if (!state.currentUser) return;
-             const userRef = doc(db, `artifacts/${appId}/public/data/users`, state.currentUser.uid);
-             await deleteDoc(userRef);
-             resetUI();
-        }
-
-        async function handleStartConference(parentId) {
-            if (!state.isTeacher || !state.currentUser) return;
-            
-            const conferenceId = `conf_${state.currentUser.uid}_${parentId}`;
-            state.currentConferenceId = conferenceId;
-
-            const conferenceRef = doc(db, `artifacts/${appId}/public/data/conferences`, conferenceId);
-            await setDoc(conferenceRef, {
-                teacherId: state.currentUser.uid,
-                parentId: parentId,
-                createdAt: serverTimestamp(),
-                status: 'active'
-            });
-
-            await updateDoc(doc(db, `artifacts/${appId}/public/data/users`, state.currentUser.uid), { status: 'in-conference', conferenceId: conferenceId });
-            await updateDoc(doc(db, `artifacts/${appId}/public/data/users`, parentId), { status: 'in-conference', conferenceId: conferenceId });
-        }
-
-        async function handleLeaveConference() {
-            if (!state.currentUser || !state.currentConferenceId) return;
-            
-            const conferenceRef = doc(db, `artifacts/${appId}/public/data/conferences`, state.currentConferenceId);
-            const conferenceDoc = await getDoc(conferenceRef);
-
-            if (conferenceDoc.exists()) {
-                const data = conferenceDoc.data();
-                // Both teacher and parent return to lobby
-                await updateDoc(doc(db, `artifacts/${appId}/public/data/users`, data.teacherId), { status: 'lobby', conferenceId: null });
-                await updateDoc(doc(db, `artifacts/${appId}/public/data/users`, data.parentId), { status: 'lobby', conferenceId: null });
-            }
-             // Optionally delete conference history, or mark as ended
-             await updateDoc(conferenceRef, { status: 'ended' });
-
-            state.currentConferenceId = null;
-            showLobbyView(); // Go back to lobby for both
-        }
-        
-        async function handleLobbyChat(e) {
-            e.preventDefault();
-            const input = document.getElementById('lobby-chat-input');
-            const message = input.value.trim();
-            if (message && state.currentUser) {
-                const userDoc = await getDoc(doc(db, `artifacts/${appId}/public/data/users`, state.currentUser.uid));
-                await addDoc(collection(db, `artifacts/${appId}/public/data/lobby-chat`), {
-                    text: message,
-                    uid: state.currentUser.uid,
-                    name: userDoc.data()?.name || 'Anonymous',
-                    createdAt: serverTimestamp()
-                });
-                input.value = '';
-            }
-        }
-
-        async function handleConferenceChat(e) {
-            e.preventDefault();
-            const input = document.getElementById('conference-chat-input');
-            const message = input.value.trim();
-            if (message && state.currentUser && state.currentConferenceId) {
-                 const userDoc = await getDoc(doc(db, `artifacts/${appId}/public/data/users`, state.currentUser.uid));
-                 await addDoc(collection(db, `artifacts/${appId}/public/data/conferences`, state.currentConferenceId, 'messages'), {
-                    text: message,
-                    uid: state.currentUser.uid,
-                    name: userDoc.data()?.name || 'Anonymous',
-                    createdAt: serverTimestamp()
-                });
-                input.value = '';
-            }
-        }
-
-        // --- UI Updates & View Management ---
-
-        function cleanupSubscriptions() {
-            state.unsubscribers.forEach(unsub => unsub());
-            state.unsubscribers = [];
-        }
-
-        function showLobbyView() {
-            cleanupSubscriptions();
-
-            loginView.classList.add('hidden');
-            conferenceView.classList.add('hidden');
-            lobbyView.classList.remove('hidden');
-
-            const usersUnsub = onSnapshot(collection(db, `artifacts/${appId}/public/data/users`), (snapshot) => {
-                const users = [];
-                let userInConference = false;
-                snapshot.forEach(docSnap => {
-                    const user = docSnap.data();
-                    users.push(user);
-                    // Check if current user is being pulled into a conference
-                    if (user.uid === state.currentUser.uid && user.status === 'in-conference') {
-                        userInConference = true;
-                        showConferenceView(user.conferenceId);
-                    }
-                });
-                if (!userInConference) {
-                    renderParentsList(users);
-                }
-            });
-
-            const chatUnsub = onSnapshot(query(collection(db, `artifacts/${appId}/public/data/lobby-chat`), orderBy('createdAt')), (snapshot) => {
-                renderLobbyChat(snapshot.docs);
-            });
-            
-            state.unsubscribers.push(usersUnsub, chatUnsub);
-        }
-
-        function showConferenceView(conferenceId) {
-            cleanupSubscriptions();
-            state.currentConferenceId = conferenceId;
-
-            loginView.classList.add('hidden');
-            lobbyView.classList.add('hidden');
-            conferenceView.classList.remove('hidden');
-            
-            const messagesUnsub = onSnapshot(query(collection(db, `artifacts/${appId}/public/data/conferences`, conferenceId, 'messages'), orderBy('createdAt')), (snapshot) => {
-                renderConferenceChat(snapshot.docs);
-            });
-
-            // Listen for conference end signal
-            const conferenceUnsub = onSnapshot(doc(db, `artifacts/${appId}/public/data/users`, state.currentUser.uid), (docSnap) => {
-                if(docSnap.data()?.status === 'lobby') {
-                    state.currentConferenceId = null;
-                    showLobbyView();
-                }
-            });
-
-            state.unsubscribers.push(messagesUnsub, conferenceUnsub);
-        }
-        
-        function resetUI() {
-            cleanupSubscriptions();
-            conferenceView.classList.add('hidden');
-            lobbyView.classList.add('hidden');
-            loginView.classList.remove('hidden');
-            document.getElementById('name').value = '';
-            state.currentUser = null;
-            state.isTeacher = false;
-            state.currentConferenceId = null;
-        }
-
-
-        function renderParentsList(users) {
-            const list = document.getElementById('parents-list');
-            list.innerHTML = '';
-            users.filter(u => !u.isTeacher && u.status === 'lobby').forEach(user => {
-                const li = document.createElement('li');
-                li.className = 'flex items-center justify-between p-3 bg-[#504945] rounded-lg';
-                li.innerHTML = `
-                    <span class="font-medium">${user.name}</span>
-                    ${state.isTeacher ? `<button data-uid="${user.uid}" class="start-conf-btn bg-[#98971a] hover:bg-[#b8bb26] text-[#282828] text-sm font-bold py-1 px-3 rounded-md shadow transition-transform duration-150 hover:scale-105">Start Meeting</button>` : ''}
-                `;
-                list.appendChild(li);
-            });
-
-            if (state.isTeacher) {
-                document.querySelectorAll('.start-conf-btn').forEach(button => {
-                    button.addEventListener('click', (e) => handleStartConference(e.target.dataset.uid));
-                });
-            }
-        }
-
-        function renderLobbyChat(docs) {
-            const messagesDiv = document.getElementById('lobby-chat-messages');
-            messagesDiv.innerHTML = '';
-            docs.forEach(doc => {
-                const data = doc.data();
-                const isMe = data.uid === state.currentUser?.uid;
-                messagesDiv.innerHTML += `
-                    <div class="flex ${isMe ? 'justify-end' : 'justify-start'}">
-                        <div class="chat-bubble rounded-lg p-3 ${isMe ? 'chat-bubble-me text-white' : 'chat-bubble-other text-white'}">
-                            ${!isMe ? `<p class="text-xs font-bold text-blue-300 mb-1">${data.name}</p>` : ''}
-                            <p class="text-sm">${data.text}</p>
-                        </div>
-                    </div>
-                `;
-            });
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        }
-
-        function renderConferenceChat(docs) {
-            const messagesDiv = document.getElementById('conference-chat-messages');
-            messagesDiv.innerHTML = '';
-            docs.forEach(doc => {
-                 const data = doc.data();
-                 const isMe = data.uid === state.currentUser?.uid;
-                 messagesDiv.innerHTML += `
-                    <div class="flex ${isMe ? 'justify-end' : 'justify-start'}">
-                        <div class="chat-bubble rounded-lg p-3 ${isMe ? 'chat-bubble-me text-white' : 'chat-bubble-other text-white'}">
-                             ${!isMe ? `<p class="text-xs font-bold text-blue-300 mb-1">${data.name}</p>` : ''}
-                            <p class="text-sm">${data.text}</p>
-                        </div>
-                    </div>
-                `;
-            });
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        }
-
-        // --- Initialize App ---
-        init();
-
+        window.onload = init;
     </script>
 </body>
 </html>
-
